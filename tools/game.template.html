@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星系分类消消乐 · Galaxy Match</title>
+<style>
+:root {
+    --cols: 8;
+    --rows: 4;
+    --bg0: #070b16;
+    --bg1: #152446;
+    --card: rgba(10, 16, 32, 0.92);
+    --ink: #e8eefc;
+    --muted: #9aa8c7;
+    --accent: #7dd3fc;
+    --gold: #fbbf24;
+    --danger: #fb7185;
+    --bonus: #4ade80;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background:
+        radial-gradient(1200px 600px at 10% -10%, #1e3a8a 0%, transparent 55%),
+        radial-gradient(900px 500px at 110% 10%, #4c1d95 0%, transparent 50%),
+        linear-gradient(160deg, var(--bg0), var(--bg1));
+}
+
+.game {
+    width: min(1080px, 96vw);
+    padding: 22px;
+    background: var(--card);
+    border: 1px solid rgba(125, 211, 252, 0.18);
+    border-radius: 26px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(10px);
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.title-block h1 {
+    margin: 0;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #fff;
+}
+
+.subtitle {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stats {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.stat {
+    min-width: 92px;
+    padding: 8px 12px;
+    border-radius: 13px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.stat strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 20px;
+    color: var(--gold);
+    transform-origin: center;
+}
+
+.stat.time strong { color: var(--danger); }
+.stat.combo strong { color: #c084fc; }
+
+#score.score-pop {
+    animation: scorePop 0.45s ease;
+}
+
+@keyframes scorePop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+.lesson {
+    min-height: 64px;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(125, 211, 252, 0.08);
+    border: 1px solid rgba(125, 211, 252, 0.16);
+}
+
+.lesson .kicker {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.lesson p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--ink);
+}
+
+.board-wrap {
+    position: relative;
+    padding: 8px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #334155, #0f172a);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.35);
+    overflow: visible;
+}
+
+.board {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--cols) / var(--rows);
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    gap: 6px;
+    padding: 6px;
+    border-radius: 14px;
+    background: #020617;
+    overflow: visible;
+}
+
+.cell {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    background: #0b1220;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cell:hover:not(.popping):not(.shattering) {
+    filter: brightness(1.12);
+}
+
+.cell.selected {
+    z-index: 10;
+    box-shadow: 0 0 0 3px #fff, 0 0 18px rgba(125, 211, 252, 0.9);
+}
+
+.tile-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    border-radius: 10px;
+}
+
+.cell.swap-right { animation: swapRight 0.35s ease; }
+.cell.swap-left { animation: swapLeft 0.35s ease; }
+.cell.swap-up { animation: swapUp 0.35s ease; }
+.cell.swap-down { animation: swapDown 0.35s ease; }
+
+@keyframes swapRight { 50% { transform: translateX(18%); } }
+@keyframes swapLeft { 50% { transform: translateX(-18%); } }
+@keyframes swapUp { 50% { transform: translateY(-18%); } }
+@keyframes swapDown { 50% { transform: translateY(18%); } }
+
+.cell.popping {
+    z-index: 30;
+    overflow: visible;
+    animation: tilePop 0.28s ease-out forwards;
+}
+
+@keyframes tilePop {
+    0% { transform: scale(1); filter: brightness(1); }
+    100% { transform: scale(1.28); filter: brightness(1.35); }
+}
+
+.cell.shattering {
+    z-index: 30;
+    overflow: visible;
+    animation: tileShatter 0.48s ease-in forwards;
+}
+
+@keyframes tileShatter {
+    0% { transform: scale(1.28) rotate(0deg); opacity: 1; }
+    100% { transform: scale(0.15) rotate(28deg); opacity: 0; }
+}
+
+.cell.falling-tile {
+    z-index: 18;
+    overflow: visible;
+}
+
+.cell.falling-tile .tile-img {
+    animation: tileFall var(--fall-ms, 420ms) cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+@keyframes tileFall {
+    0% { transform: translateY(calc(-1 * var(--fall-px, 80px))); }
+    100% { transform: translateY(0); }
+}
+
+.cell.hint {
+    z-index: 14;
+    animation: hintBlink 1.5s ease-in-out infinite;
+}
+
+@keyframes hintBlink {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 0 3px #fff, 0 0 18px rgba(255, 255, 255, 0.95);
+    }
+}
+
+.combo-burst {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 100;
+    pointer-events: none;
+    color: white;
+    font-size: clamp(32px, 7vw, 72px);
+    font-weight: 900;
+    font-style: italic;
+    white-space: nowrap;
+    text-shadow: 0 4px 0 #1d4ed8, 0 0 25px white;
+    animation: comboShow 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+
+@keyframes comboShow {
+    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+    35% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -70%) scale(0.9); opacity: 0; }
+}
+
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 160;
+    background: var(--gold);
+    animation: particleFly 0.7s ease-out forwards;
+}
+
+.particle.square { border-radius: 2px; }
+
+@keyframes particleFly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; }
+}
+
+.tile-shard {
+    position: absolute;
+    pointer-events: none;
+    z-index: 155;
+    object-fit: cover;
+    border-radius: 8px;
+    animation: shardFly 0.5s ease-in forwards;
+}
+
+@keyframes shardFly {
+    0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--x), var(--y)) scale(0.4) rotate(var(--rot)); opacity: 0; }
+}
+
+.bonus-float {
+    position: absolute;
+    z-index: 210;
+    pointer-events: none;
+    color: var(--bonus);
+    font-weight: 900;
+    font-size: 26px;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 14px rgba(74, 222, 128, 0.85), 0 2px 0 rgba(0, 0, 0, 0.45);
+    animation: bonusFloat 0.95s ease-out forwards;
+    white-space: nowrap;
+}
+
+@keyframes bonusFloat {
+    0% { transform: translate(0, 0) scale(0.7); opacity: 0; }
+    20% { transform: translate(6px, -6px) scale(1.18); opacity: 1; }
+    100% { transform: translate(10px, -38px) scale(1); opacity: 0; }
+}
+
+.legend {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    min-width: 0;
+}
+
+.legend-item img {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.legend-item span {
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.legend-item small {
+    display: block;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.message {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.restart {
+    border: 0;
+    padding: 10px 18px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #38bdf8, #1d4ed8);
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+.restart:hover { transform: translateY(-1px); }
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(6px);
+}
+
+.overlay.show { display: flex; }
+
+.modal {
+    width: min(440px, 90vw);
+    padding: 32px;
+    text-align: center;
+    border-radius: 24px;
+    background: #0f172a;
+    border: 1px solid rgba(125, 211, 252, 0.25);
+    color: var(--ink);
+}
+
+.modal h2 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--gold);
+}
+
+.modal p {
+    margin: 14px 0 22px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.modal button {
+    width: 100%;
+    border: 0;
+    padding: 13px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #38bdf8, #1d4ed8);
+    color: white;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.status-screen {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    color: var(--muted);
+}
+
+.status-screen h2 {
+    margin: 0;
+    color: var(--ink);
+}
+
+.status-screen.error h2 { color: var(--danger); }
+
+.hidden { display: none !important; }
+
+@media (max-width: 900px) {
+    .legend { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+    body { padding: 8px; }
+    .game { width: 100%; padding: 10px; border-radius: 18px; }
+    .header { flex-direction: column; gap: 8px; }
+    .stats { width: 100%; }
+    .stat { flex: 1; min-width: 0; }
+    .title-block h1 { font-size: 20px; }
+    .board { gap: 3px; padding: 4px; }
+    .bonus-float { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="game">
+    <div class="header">
+        <div class="title-block">
+            <h1>星系分类消消乐</h1>
+            <div id="subtitle" class="subtitle">Galaxy morphology match-3</div>
+        </div>
+        <div class="stats">
+            <div class="stat">分数<strong id="score">0</strong></div>
+            <div class="stat time">时间<strong><span id="time">60</span>s</strong></div>
+            <div class="stat combo">连消<strong id="combo">0</strong></div>
+        </div>
+    </div>
+
+    <div id="lesson" class="lesson">
+        <div class="kicker">How to play · 玩法</div>
+        <p>同一形态类的不同照片可以消除。Matching is by class (folder), not by identical image.</p>
+    </div>
+
+    <div id="status" class="status-screen">
+        <h2>Loading galaxy catalog…</h2>
+        <p>正在载入嵌入的星系图像。</p>
+    </div>
+
+    <div id="playArea" class="hidden">
+        <div id="boardWrap" class="board-wrap">
+            <div id="board" class="board"></div>
+        </div>
+        <div id="legend" class="legend"></div>
+        <div class="footer">
+            <div id="message" class="message">点击相邻星系进行交换</div>
+            <button class="restart" type="button" onclick="restartGame()">重新开始</button>
+        </div>
+    </div>
+</div>
+
+<div id="gameOver" class="overlay">
+    <div class="modal">
+        <h2>时间到</h2>
+        <p>最终得分<br><strong id="finalScore" style="color:#fbbf24;font-size:36px">0</strong></p>
+        <button type="button" onclick="restartGame()">再观察一轮</button>
+    </div>
+</div>
+
+<script>
+/* Galaxy class copy: English names stay visible; player-facing notes are Chinese. */
+const CLASS_ORDER = ["FaceOnSpirals", "EdgeOnDisk", "Irregular", "Smooth"];
+
+const CLASS_INFO = {
+    FaceOnSpirals: {
+        en: "Face-on spiral",
+        zh: "正向旋涡星系",
+        select: "正向旋涡星系（Face-on spiral）：几乎正面朝向我们，能看到旋臂绕核心展开。",
+        match: "这些正向旋涡照片可以差很多，但同属一类：盘面朝向我们，旋臂可见。"
+    },
+    EdgeOnDisk: {
+        en: "Edge-on disk",
+        zh: "侧向盘星系",
+        select: "侧向盘星系（Edge-on disk）：从侧面看盘面，像一条亮带，有时中央较鼓。",
+        match: "侧向盘星系外形像细光带。倾角和曝光可以不同，类别仍相同。"
+    },
+    Irregular: {
+        en: "Irregular",
+        zh: "不规则星系",
+        select: "不规则星系（Irregular）：没有稳定的盘或对称旋臂，外形不规则。",
+        match: "不规则星系外形可以差很多，正因为缺少规则结构才归为一类。"
+    },
+    Smooth: {
+        en: "Smooth",
+        zh: "平滑星系",
+        select: "平滑星系（Smooth）：光分布平滑，几乎没有旋臂或团块，常见于椭圆星系。",
+        match: "平滑星系没有旋臂细节，亮度从中心向外平稳下降。"
+    }
+};
+
+const GALAXY_DATA = __GALAXY_DATA__;
+const GAME_TIME = 60;
+const TIME_BONUS = 3;
+const FAIL_HINT_COUNT = 3;
+const IDLE_HINT_MS = 10000;
+
+let ROWS = 4;
+let COLS = 8;
+let board = [];
+let selected = null;
+let score = 0;
+let timeLeft = GAME_TIME;
+let combo = 0;
+let timer = null;
+let locked = false;
+let imageErrors = 0;
+let boardClickBound = false;
+let failSwaps = 0;
+let hintPair = null;
+let idleHintTimer = null;
+let pendingHint = false;
+
+function classLabel(classId) {
+    const info = CLASS_INFO[classId];
+    if (!info) return classId;
+    return info.zh + " · " + info.en;
+}
+
+function sizeBoardFromUniqueCount(uniqueCount) {
+    /* Board cells never exceed unique images, so every cell can show a distinct file.
+       Leave about one third of the catalog unused so new tiles can prefer unseen files. */
+    if (uniqueCount < 9) {
+        return { rows: 0, cols: 0, cells: 0 };
+    }
+    const cells = Math.min(uniqueCount, Math.max(9, Math.floor(uniqueCount * 2 / 3)));
+    let cols = Math.round(Math.sqrt(cells * 2));
+    cols = Math.max(3, Math.min(cols, cells));
+    let rows = Math.floor(cells / cols);
+    if (rows < 3) {
+        rows = 3;
+        cols = Math.max(3, Math.floor(cells / rows));
+    }
+    while (rows * cols > uniqueCount) {
+        if (cols > 3) cols -= 1;
+        else rows -= 1;
+    }
+    return { rows: rows, cols: cols, cells: rows * cols };
+}
+
+function showStatus(kind, title, detail) {
+    const status = document.getElementById("status");
+    const playArea = document.getElementById("playArea");
+    status.className = "status-screen " + (kind || "");
+    status.classList.remove("hidden");
+    playArea.classList.add("hidden");
+    status.innerHTML = "<h2>" + title + "</h2><p>" + detail + "</p>";
+}
+
+function showPlayArea() {
+    document.getElementById("status").classList.add("hidden");
+    document.getElementById("playArea").classList.remove("hidden");
+}
+
+function setLesson(kicker, text) {
+    document.getElementById("lesson").innerHTML =
+        '<div class="kicker">' + kicker + "</div><p>" + text + "</p>";
+}
+
+function catalogByClass() {
+    const groups = {};
+    GALAXY_DATA.forEach(function (item) {
+        if (!groups[item.classId]) groups[item.classId] = [];
+        groups[item.classId].push(item);
+    });
+    return groups;
+}
+
+function idsOnBoard() {
+    const used = new Set();
+    board.forEach(function (row) {
+        row.forEach(function (tile) {
+            if (tile) used.add(tile.id);
+        });
+    });
+    return used;
+}
+
+function pickUnusedTile(avoidClassId, usedIds) {
+    /* Prefer catalog entries whose image file is not currently on the board. */
+    const occupied = usedIds || idsOnBoard();
+    let unused = GALAXY_DATA.filter(function (item) {
+        return !occupied.has(item.id);
+    });
+    if (avoidClassId) {
+        const filtered = unused.filter(function (item) {
+            return item.classId !== avoidClassId;
+        });
+        if (filtered.length) unused = filtered;
+    }
+    if (!unused.length) return null;
+    return unused[Math.floor(Math.random() * unused.length)];
+}
+
+function wouldOpenMatch(r, c, classId) {
+    if (c >= 2 &&
+        board[r][c - 1] && board[r][c - 2] &&
+        board[r][c - 1].classId === classId &&
+        board[r][c - 2].classId === classId) {
+        return true;
+    }
+    if (r >= 2 &&
+        board[r - 1][c] && board[r - 2][c] &&
+        board[r - 1][c].classId === classId &&
+        board[r - 2][c].classId === classId) {
+        return true;
+    }
+    return false;
+}
+
+function cloneTile(item) {
+    return {
+        id: item.id,
+        classId: item.classId,
+        file: item.file,
+        src: item.src
+    };
+}
+
+function initBoard() {
+    const used = new Set();
+    board = [];
+    for (let r = 0; r < ROWS; r++) {
+        board[r] = [];
+        for (let c = 0; c < COLS; c++) {
+            let chosen = null;
+            for (let attempt = 0; attempt < 24; attempt++) {
+                const candidate = pickUnusedTile(null, used);
+                if (!candidate) break;
+                if (wouldOpenMatch(r, c, candidate.classId)) continue;
+                chosen = candidate;
+                break;
+            }
+            if (!chosen) chosen = pickUnusedTile(null, used);
+            if (!chosen) return false;
+            board[r][c] = cloneTile(chosen);
+            used.add(chosen.id);
+        }
+    }
+    return findMatches().length === 0;
+}
+
+function uniqueImageCountOnBoard() {
+    const ids = [];
+    board.forEach(function (row) {
+        row.forEach(function (tile) {
+            if (tile) ids.push(tile.id);
+        });
+    });
+    return new Set(ids).size === ids.length;
+}
+
+function findMatches() {
+    const matches = new Set();
+
+    for (let r = 0; r < ROWS; r++) {
+        let count = 1;
+        for (let c = 1; c < COLS; c++) {
+            const same = board[r][c] && board[r][c - 1] &&
+                board[r][c].classId === board[r][c - 1].classId;
+            if (same) {
+                count += 1;
+            } else {
+                if (count >= 3) {
+                    for (let k = c - count; k < c; k++) matches.add(r + "," + k);
+                }
+                count = 1;
+            }
+        }
+        if (count >= 3) {
+            for (let k = COLS - count; k < COLS; k++) matches.add(r + "," + k);
+        }
+    }
+
+    for (let c = 0; c < COLS; c++) {
+        let count = 1;
+        for (let r = 1; r < ROWS; r++) {
+            const same = board[r][c] && board[r - 1][c] &&
+                board[r][c].classId === board[r - 1][c].classId;
+            if (same) {
+                count += 1;
+            } else {
+                if (count >= 3) {
+                    for (let k = r - count; k < r; k++) matches.add(k + "," + c);
+                }
+                count = 1;
+            }
+        }
+        if (count >= 3) {
+            for (let k = ROWS - count; k < ROWS; k++) matches.add(k + "," + c);
+        }
+    }
+
+    return Array.from(matches).map(function (item) {
+        const parts = item.split(",");
+        return { r: Number(parts[0]), c: Number(parts[1]) };
+    });
+}
+
+function getCell(r, c) {
+    return document.querySelector("#board .cell[data-r=\"" + r + "\"][data-c=\"" + c + "\"]");
+}
+
+function onImgError() {
+    imageErrors += 1;
+    if (imageErrors >= 3) {
+        showStatus(
+            "error",
+            "Galaxy images failed to load",
+            "嵌入的星系图像无法显示。请重新打开本文件，或运行 tools/build_index.py 重建。"
+        );
+    }
+}
+
+function paintCell(r, c, force) {
+    const cell = getCell(r, c);
+    if (!cell) return;
+    const tile = board[r][c];
+    if (!tile) {
+        cell.dataset.tileId = "";
+        cell.innerHTML = "";
+        cell.removeAttribute("title");
+        return;
+    }
+    if (!force && cell.dataset.tileId === tile.id) {
+        return;
+    }
+    cell.dataset.tileId = tile.id;
+    cell.title = classLabel(tile.classId) + " · " + tile.file;
+    let img = cell.querySelector(".tile-img");
+    if (!img) {
+        img = document.createElement("img");
+        img.className = "tile-img";
+        img.addEventListener("error", onImgError);
+        cell.appendChild(img);
+    }
+    img.alt = classLabel(tile.classId);
+    img.src = tile.src;
+}
+
+function mountBoard() {
+    const boardElement = document.getElementById("board");
+    boardElement.style.setProperty("--cols", String(COLS));
+    boardElement.style.setProperty("--rows", String(ROWS));
+    boardElement.innerHTML = "";
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            cell.dataset.r = String(r);
+            cell.dataset.c = String(c);
+            boardElement.appendChild(cell);
+        }
+    }
+    if (!boardClickBound) {
+        boardElement.addEventListener("click", function (event) {
+            const cell = event.target.closest(".cell");
+            if (!cell || !boardElement.contains(cell)) return;
+            clickCell(Number(cell.dataset.r), Number(cell.dataset.c));
+        });
+        boardClickBound = true;
+    }
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            paintCell(r, c, true);
+        }
+    }
+    refreshSelection();
+}
+
+function refreshSelection() {
+    document.querySelectorAll("#board .cell").forEach(function (cell) {
+        const r = Number(cell.dataset.r);
+        const c = Number(cell.dataset.c);
+        const on = selected && selected.r === r && selected.c === c;
+        cell.classList.toggle("selected", !!on);
+    });
+}
+
+function updateHud() {
+    document.getElementById("score").textContent = String(score);
+    document.getElementById("time").textContent = String(timeLeft);
+    document.getElementById("combo").textContent = String(combo);
+}
+
+function pulseScore() {
+    const el = document.getElementById("score");
+    el.classList.remove("score-pop");
+    void el.offsetWidth;
+    el.classList.add("score-pop");
+}
+
+function addScore(delta) {
+    if (!delta) return;
+    score += delta;
+    document.getElementById("score").textContent = String(score);
+    pulseScore();
+}
+
+function addTimeBonus() {
+    timeLeft += TIME_BONUS;
+    document.getElementById("time").textContent = String(timeLeft);
+}
+
+function renderLegend() {
+    const legend = document.getElementById("legend");
+    legend.innerHTML = "";
+    const groups = catalogByClass();
+    const ids = CLASS_ORDER.filter(function (classId) {
+        return groups[classId];
+    });
+    Object.keys(groups).forEach(function (classId) {
+        if (ids.indexOf(classId) < 0) ids.push(classId);
+    });
+    ids.forEach(function (classId) {
+        const info = CLASS_INFO[classId] || { zh: classId, en: classId };
+        const item = document.createElement("div");
+        item.className = "legend-item";
+        const img = document.createElement("img");
+        img.src = groups[classId][0].src;
+        img.alt = info.en;
+        const label = document.createElement("span");
+        label.innerHTML = info.zh + "<small>" + info.en + "</small>";
+        item.appendChild(img);
+        item.appendChild(label);
+        legend.appendChild(item);
+    });
+}
+
+function swapCellContents(a, b) {
+    const cellA = getCell(a.r, a.c);
+    const cellB = getCell(b.r, b.c);
+    if (!cellA || !cellB) return;
+    const idA = cellA.dataset.tileId;
+    const titleA = cellA.title;
+    const nodesA = Array.from(cellA.childNodes);
+    Array.from(cellB.childNodes).forEach(function (node) {
+        cellA.appendChild(node);
+    });
+    nodesA.forEach(function (node) {
+        cellB.appendChild(node);
+    });
+    cellA.dataset.tileId = cellB.dataset.tileId;
+    cellB.dataset.tileId = idA;
+    cellA.title = cellB.title;
+    cellB.title = titleA;
+}
+
+async function clickCell(r, c) {
+    if (locked || timeLeft <= 0) return;
+
+    const tile = board[r][c];
+    if (tile) {
+        const info = CLASS_INFO[tile.classId];
+        setLesson(
+            classLabel(tile.classId),
+            info ? info.select : tile.classId
+        );
+    }
+
+    if (!selected) {
+        selected = { r: r, c: c };
+        refreshSelection();
+        return;
+    }
+
+    if (selected.r === r && selected.c === c) {
+        selected = null;
+        refreshSelection();
+        return;
+    }
+
+    const distance = Math.abs(selected.r - r) + Math.abs(selected.c - c);
+    if (distance !== 1) {
+        selected = { r: r, c: c };
+        refreshSelection();
+        document.getElementById("message").textContent = "请选择相邻的格子进行交换";
+        return;
+    }
+
+    locked = true;
+    const first = { r: selected.r, c: selected.c };
+    const second = { r: r, c: c };
+    const swappingHint = isHintedSwap(first, second);
+    const direction = swapDirection(first, second);
+    selected = null;
+    refreshSelection();
+    if (swappingHint) dismissHint();
+    paintSwap(first, second, direction);
+    await sleep(180);
+    swap(first, second);
+    swapCellContents(first, second);
+    clearSwapClasses(first, second);
+
+    const matches = findMatches();
+    if (matches.length === 0) {
+        const reverse = swapDirection(first, second);
+        paintSwap(first, second, reverse);
+        await sleep(180);
+        swap(first, second);
+        swapCellContents(first, second);
+        clearSwapClasses(first, second);
+        failSwaps += 1;
+        document.getElementById("message").textContent = "类别未连成三个，换回原位";
+        await sleep(220);
+        document.getElementById("message").textContent = "点击相邻星系进行交换";
+        locked = false;
+        if (failSwaps >= FAIL_HINT_COUNT) requestHint();
+        maybeFlushHint();
+        return;
+    }
+
+    combo = 0;
+    await clearMatches();
+    locked = false;
+    maybeFlushHint();
+}
+
+function swapDirection(a, b) {
+    if (a.r === b.r && a.c < b.c) return ["swap-right", "swap-left"];
+    if (a.r === b.r && a.c > b.c) return ["swap-left", "swap-right"];
+    if (a.c === b.c && a.r < b.r) return ["swap-down", "swap-up"];
+    return ["swap-up", "swap-down"];
+}
+
+function paintSwap(a, b, direction) {
+    const firstCell = getCell(a.r, a.c);
+    const secondCell = getCell(b.r, b.c);
+    if (firstCell) firstCell.classList.add(direction[0]);
+    if (secondCell) secondCell.classList.add(direction[1]);
+}
+
+function clearSwapClasses(a, b) {
+    [getCell(a.r, a.c), getCell(b.r, b.c)].forEach(function (cell) {
+        if (!cell) return;
+        cell.classList.remove("swap-right", "swap-left", "swap-up", "swap-down");
+    });
+}
+
+function swap(a, b) {
+    const temp = board[a.r][a.c];
+    board[a.r][a.c] = board[b.r][b.c];
+    board[b.r][b.c] = temp;
+}
+
+function samePos(a, b) {
+    return a && b && a.r === b.r && a.c === b.c;
+}
+
+function isHintedSwap(a, b) {
+    if (!hintPair) return false;
+    return (samePos(a, hintPair.a) && samePos(b, hintPair.b)) ||
+        (samePos(a, hintPair.b) && samePos(b, hintPair.a));
+}
+
+function clearHintClasses() {
+    document.querySelectorAll("#board .cell.hint").forEach(function (cell) {
+        cell.classList.remove("hint");
+    });
+}
+
+function dismissHint() {
+    hintPair = null;
+    pendingHint = false;
+    clearHintClasses();
+}
+
+function resetHintTracking() {
+    failSwaps = 0;
+    pendingHint = false;
+    dismissHint();
+    restartIdleHintTimer();
+}
+
+function restartIdleHintTimer() {
+    if (idleHintTimer) {
+        clearTimeout(idleHintTimer);
+        idleHintTimer = null;
+    }
+    idleHintTimer = setTimeout(function () {
+        requestHint("idle");
+    }, IDLE_HINT_MS);
+}
+
+function findValidSwaps() {
+    const pairs = [];
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const neighbors = [];
+            if (c + 1 < COLS) neighbors.push({ r: r, c: c + 1 });
+            if (r + 1 < ROWS) neighbors.push({ r: r + 1, c: c });
+            for (let i = 0; i < neighbors.length; i++) {
+                const n = neighbors[i];
+                swap({ r: r, c: c }, n);
+                const hits = findMatches();
+                swap({ r: r, c: c }, n);
+                if (hits.length >= 3) {
+                    pairs.push({ a: { r: r, c: c }, b: { r: n.r, c: n.c } });
+                }
+            }
+        }
+    }
+    return pairs;
+}
+
+function applyHintClasses() {
+    clearHintClasses();
+    if (!hintPair) return;
+    const a = getCell(hintPair.a.r, hintPair.a.c);
+    const b = getCell(hintPair.b.r, hintPair.b.c);
+    if (a) a.classList.add("hint");
+    if (b) b.classList.add("hint");
+}
+
+function showHint() {
+    if (hintPair || timeLeft <= 0) return;
+    const pairs = findValidSwaps();
+    if (!pairs.length) return;
+    hintPair = pairs[Math.floor(Math.random() * pairs.length)];
+    applyHintClasses();
+    document.getElementById("message").textContent = "提示：试试高亮的两个格子";
+}
+
+function requestHint() {
+    if (hintPair || timeLeft <= 0) return;
+    if (locked) {
+        pendingHint = true;
+        return;
+    }
+    showHint();
+}
+
+function maybeFlushHint() {
+    if (pendingHint && !hintPair && !locked && timeLeft > 0) {
+        pendingHint = false;
+        showHint();
+    }
+}
+
+function rowStridePx() {
+    const a = getCell(0, 0);
+    const b = getCell(1, 0);
+    if (!a || !b) return 80;
+    return b.getBoundingClientRect().top - a.getBoundingClientRect().top;
+}
+
+function planGravity() {
+    const moves = [];
+    const spawns = [];
+    const used = idsOnBoard();
+
+    for (let c = 0; c < COLS; c++) {
+        const kept = [];
+        for (let r = 0; r < ROWS; r++) {
+            if (board[r][c]) kept.push({ fromR: r, tile: board[r][c] });
+        }
+        const holes = ROWS - kept.length;
+        const col = new Array(ROWS);
+        for (let i = 0; i < holes; i++) {
+            const next = pickUnusedTile(null, used);
+            if (!next) return { error: true, moves: [], spawns: [] };
+            col[i] = cloneTile(next);
+            used.add(next.id);
+            spawns.push({ r: i, c: c, tile: col[i] });
+        }
+        for (let i = 0; i < kept.length; i++) {
+            const dest = holes + i;
+            col[dest] = kept[i].tile;
+            if (dest !== kept[i].fromR) {
+                moves.push({
+                    fromR: kept[i].fromR,
+                    toR: dest,
+                    c: c,
+                    tile: kept[i].tile
+                });
+            }
+        }
+        for (let r = 0; r < ROWS; r++) {
+            board[r][c] = col[r];
+        }
+    }
+    return { error: false, moves: moves, spawns: spawns };
+}
+
+function extractCellVisual(r, c) {
+    const cell = getCell(r, c);
+    if (!cell) return null;
+    const img = cell.querySelector(".tile-img");
+    const pack = {
+        img: img,
+        tileId: cell.dataset.tileId,
+        title: cell.title
+    };
+    if (img) img.remove();
+    cell.dataset.tileId = "";
+    cell.removeAttribute("title");
+    cell.innerHTML = "";
+    return pack;
+}
+
+function placeVisual(cell, pack, tile) {
+    cell.innerHTML = "";
+    if (pack && pack.img) {
+        cell.appendChild(pack.img);
+        cell.dataset.tileId = pack.tileId || (tile && tile.id) || "";
+        cell.title = pack.title || "";
+        return;
+    }
+    cell.dataset.tileId = "";
+    if (tile) paintCell(Number(cell.dataset.r), Number(cell.dataset.c), true);
+}
+
+async function animateGravity(moves, spawns) {
+    const stride = rowStridePx();
+    const packs = {};
+    moves.forEach(function (m) {
+        packs[m.fromR + "," + m.c] = extractCellVisual(m.fromR, m.c);
+    });
+    spawns.forEach(function (s) {
+        const cell = getCell(s.r, s.c);
+        if (!cell) return;
+        cell.classList.remove("popping", "shattering", "spawning", "falling-tile");
+        cell.innerHTML = "";
+        cell.dataset.tileId = "";
+        cell.removeAttribute("title");
+    });
+
+    moves.forEach(function (m) {
+        const dest = getCell(m.toR, m.c);
+        if (!dest) return;
+        dest.classList.remove("popping", "shattering", "spawning", "falling-tile");
+        placeVisual(dest, packs[m.fromR + "," + m.c], m.tile);
+        const dist = m.toR - m.fromR;
+        dest.style.setProperty("--fall-px", dist * stride + "px");
+        dest.style.setProperty("--fall-ms", 280 + dist * 90 + "ms");
+        dest.classList.add("falling-tile");
+    });
+
+    spawns.forEach(function (s) {
+        const cell = getCell(s.r, s.c);
+        if (!cell) return;
+        paintCell(s.r, s.c, true);
+        const dist = s.r + 1;
+        cell.style.setProperty("--fall-px", dist * stride + "px");
+        cell.style.setProperty("--fall-ms", 300 + dist * 90 + "ms");
+        cell.classList.add("falling-tile");
+    });
+
+    let wait = 380;
+    moves.concat(spawns).forEach(function (item) {
+        const dist = item.toR != null ? item.toR - item.fromR : item.r + 1;
+        wait = Math.max(wait, 300 + dist * 90 + 40);
+    });
+    await sleep(wait);
+
+    document.querySelectorAll("#board .cell.falling-tile").forEach(function (cell) {
+        cell.classList.remove("falling-tile");
+        cell.style.removeProperty("--fall-px");
+        cell.style.removeProperty("--fall-ms");
+    });
+}
+
+async function clearMatches() {
+    resetHintTracking();
+    while (true) {
+        const matches = findMatches();
+        if (matches.length === 0) break;
+
+        combo += 1;
+        const matchedClass = board[matches[0].r][matches[0].c].classId;
+        const info = CLASS_INFO[matchedClass];
+        const baseScore = matches.length * 10;
+        const comboBonus = combo > 1 ? combo * 25 : 0;
+        addScore(baseScore + comboBonus);
+        addTimeBonus();
+
+        setLesson(
+            "Match · " + classLabel(matchedClass),
+            info ? info.match : matchedClass
+        );
+
+        if (combo === 1) {
+            document.getElementById("message").textContent =
+                "消除了 " + matches.length + " 个" + (info ? info.zh : matchedClass) + "  +" + TIME_BONUS + "s";
+        } else {
+            document.getElementById("message").textContent =
+                combo + " 连消！+" + comboBonus + " 分  +" + TIME_BONUS + "s";
+        }
+
+        if (combo >= 2) showCombo(combo);
+
+        document.getElementById("combo").textContent = String(combo);
+
+        matches.forEach(function (pos) {
+            const cell = getCell(pos.r, pos.c);
+            if (cell) cell.classList.add("popping");
+        });
+        showTimeBonus(matches);
+        await sleep(280);
+
+        matches.forEach(function (pos) {
+            const cell = getCell(pos.r, pos.c);
+            if (!cell) return;
+            cell.classList.remove("popping");
+            cell.classList.add("shattering");
+            burstShards(cell);
+            createParticles(cell);
+        });
+        await sleep(480);
+
+        matches.forEach(function (pos) {
+            board[pos.r][pos.c] = null;
+            const cell = getCell(pos.r, pos.c);
+            if (!cell) return;
+            cell.classList.remove("popping", "shattering", "spawning", "falling-tile", "hint");
+            cell.innerHTML = "";
+            cell.dataset.tileId = "";
+            cell.removeAttribute("title");
+        });
+
+        const gravity = planGravity();
+        if (gravity.error) {
+            showStatus(
+                "error",
+                "Not enough unique images",
+                "棋盘需要的不重复图像多于目录中的唯一文件。"
+            );
+            return;
+        }
+
+        if (!uniqueImageCountOnBoard()) {
+            console.error("Duplicate image file detected on the board");
+        }
+
+        await animateGravity(gravity.moves, gravity.spawns);
+    }
+
+    setTimeout(function () {
+        document.getElementById("message").textContent = "点击相邻星系进行交换";
+    }, 400);
+}
+
+function showCombo(number) {
+    const wrap = document.getElementById("boardWrap");
+    const el = document.createElement("div");
+    el.className = "combo-burst";
+    el.textContent = "COMBO ×" + number;
+    wrap.appendChild(el);
+    setTimeout(function () { el.remove(); }, 900);
+}
+
+function showTimeBonus(matches) {
+    const wrap = document.getElementById("boardWrap");
+    const wrapRect = wrap.getBoundingClientRect();
+    let maxRight = 0;
+    let sumY = 0;
+    matches.forEach(function (pos) {
+        const cell = getCell(pos.r, pos.c);
+        if (!cell) return;
+        const rect = cell.getBoundingClientRect();
+        maxRight = Math.max(maxRight, rect.right - wrapRect.left);
+        sumY += rect.top - wrapRect.top + rect.height / 2;
+    });
+    const popup = document.createElement("div");
+    popup.className = "bonus-float";
+    popup.textContent = "+" + TIME_BONUS + "s";
+    popup.style.left = Math.min(maxRight + 6, wrapRect.width - 48) + "px";
+    popup.style.top = (sumY / matches.length - 12) + "px";
+    wrap.appendChild(popup);
+    setTimeout(function () { popup.remove(); }, 950);
+}
+
+function burstShards(cell) {
+    const img = cell.querySelector(".tile-img");
+    if (!img) return;
+    const wrap = document.getElementById("boardWrap");
+    const cellRect = cell.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const clips = [
+        "inset(0 50% 50% 0)",
+        "inset(0 0 50% 50%)",
+        "inset(50% 50% 0 0)",
+        "inset(50% 0 0 50%)"
+    ];
+    clips.forEach(function (clip, i) {
+        const shard = img.cloneNode(true);
+        shard.className = "tile-shard";
+        shard.style.left = (cellRect.left - wrapRect.left) + "px";
+        shard.style.top = (cellRect.top - wrapRect.top) + "px";
+        shard.style.width = cellRect.width + "px";
+        shard.style.height = cellRect.height + "px";
+        shard.style.clipPath = clip;
+        const angle = (i * 90 + 45) * Math.PI / 180;
+        shard.style.setProperty("--x", Math.cos(angle) * 52 + "px");
+        shard.style.setProperty("--y", Math.sin(angle) * 52 + "px");
+        shard.style.setProperty("--rot", (i % 2 === 0 ? 28 : -32) + "deg");
+        wrap.appendChild(shard);
+        setTimeout(function () { shard.remove(); }, 520);
+    });
+}
+
+function createParticles(cell) {
+    if (!cell) return;
+    const wrap = document.getElementById("boardWrap");
+    const rect = cell.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const centerX = rect.left - wrapRect.left + rect.width / 2;
+    const centerY = rect.top - wrapRect.top + rect.height / 2;
+    const colors = ["#fbbf24", "#fde68a", "#7dd3fc", "#ffffff", "#4ade80"];
+    for (let i = 0; i < 16; i++) {
+        const particle = document.createElement("div");
+        particle.className = "particle" + (i % 3 === 0 ? " square" : "");
+        particle.style.left = centerX + "px";
+        particle.style.top = centerY + "px";
+        particle.style.background = colors[i % colors.length];
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 28 + Math.random() * 70;
+        particle.style.setProperty("--x", Math.cos(angle) * distance + "px");
+        particle.style.setProperty("--y", Math.sin(angle) * distance + "px");
+        const size = 4 + Math.random() * 8;
+        particle.style.width = size + "px";
+        particle.style.height = size + "px";
+        wrap.appendChild(particle);
+        setTimeout(function () { particle.remove(); }, 720);
+    }
+}
+
+function restartGame() {
+    clearInterval(timer);
+    if (idleHintTimer) {
+        clearTimeout(idleHintTimer);
+        idleHintTimer = null;
+    }
+    score = 0;
+    timeLeft = GAME_TIME;
+    combo = 0;
+    selected = null;
+    locked = false;
+    imageErrors = 0;
+    failSwaps = 0;
+    hintPair = null;
+    pendingHint = false;
+    clearHintClasses();
+    document.getElementById("score").classList.remove("score-pop");
+    document.getElementById("gameOver").classList.remove("show");
+    document.getElementById("message").textContent = "点击相邻星系进行交换";
+    setLesson(
+        "How to play · 玩法",
+        "交换相邻格子。只要形态类相同，即使照片不同也可以连成三个消除。成功消除会获得 +3s。"
+    );
+
+    if (!Array.isArray(GALAXY_DATA) || GALAXY_DATA.length === 0) {
+        showStatus(
+            "error",
+            "No galaxy images found",
+            "目录为空。请确认 GalaxyImages4Class/ 后运行 python3 tools/build_index.py。"
+        );
+        return;
+    }
+
+    const size = sizeBoardFromUniqueCount(GALAXY_DATA.length);
+    ROWS = size.rows;
+    COLS = size.cols;
+    if (!ROWS || !COLS) {
+        showStatus(
+            "error",
+            "Not enough unique images",
+            "至少需要 9 张不重复图像才能组成可玩棋盘。"
+        );
+        return;
+    }
+
+    const classCount = new Set(GALAXY_DATA.map(function (item) { return item.classId; })).size;
+    document.getElementById("subtitle").textContent =
+        classCount + " classes · " + GALAXY_DATA.length + " unique images · " + COLS + "×" + ROWS + " board";
+
+    let ready = false;
+    for (let i = 0; i < 40; i++) {
+        if (initBoard() && uniqueImageCountOnBoard()) {
+            ready = true;
+            break;
+        }
+    }
+    if (!ready) {
+        showStatus(
+            "error",
+            "Could not build a fair board",
+            "无法在无开局三连且图像不重复的条件下生成棋盘。"
+        );
+        return;
+    }
+
+    showPlayArea();
+    renderLegend();
+    mountBoard();
+    updateHud();
+    startTimer();
+    resetHintTracking();
+}
+
+function startTimer() {
+    timer = setInterval(function () {
+        timeLeft -= 1;
+        document.getElementById("time").textContent = String(timeLeft);
+        if (timeLeft <= 0) {
+            timeLeft = 0;
+            document.getElementById("time").textContent = "0";
+            clearInterval(timer);
+            locked = true;
+            if (idleHintTimer) {
+                clearTimeout(idleHintTimer);
+                idleHintTimer = null;
+            }
+            dismissHint();
+            document.getElementById("finalScore").textContent = String(score);
+            document.getElementById("gameOver").classList.add("show");
+        }
+    }, 1000);
+}
+
+function sleep(ms) {
+    return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+    });
+}
+
+restartGame();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Local / generated
+.DS_Store
+**/.DS_Store
+__pycache__/
+*.py[cod]
+*.pyc
+.Python
+.venv/
+venv/
+.env
+.env.*
+*.log
+*.swp
+*~
+
+# Original ~6000-image catalog (not used by the portable demo)
+GalaxyImages/
+
+# Archives and editor junk
+*.zip
+.idea/
+.vscode/
+.cursor/
