@@ -194,7 +194,55 @@ async function main() {
         if (intro.cols !== 6 || intro.rows !== 4 || intro.cells !== 24) throw new Error("Easy board should be 6x4");
         report.push("enter Easy: intro modal, 0/20, 6x4 board");
 
-        await cdp.eval("elapsedSec = 91; pauseRun()");
+        await cdp.eval("resumeFromBrief()");
+        await sleep(200);
+        const pauseKeep = await cdp.eval(`(function () {
+            const before = board.map(function (row) { return row.map(function (t) { return t && t.id; }); });
+            clearsDone = 5;
+            elapsedSec = 7;
+            document.getElementById("pauseBtn").click();
+            return {
+                brief: document.getElementById("briefOverlay").classList.contains("show"),
+                title: document.getElementById("briefTitle").textContent,
+                clears: document.getElementById("briefClears").textContent,
+                elapsed: document.getElementById("briefElapsed").textContent,
+                same: JSON.stringify(before) === JSON.stringify(board.map(function (row) {
+                    return row.map(function (t) { return t && t.id; });
+                })),
+                footerReset: !!document.querySelector("#playArea button[onclick*=\\"restartCurrentRun\\"]"),
+                pauseText: document.getElementById("pauseBtn").textContent,
+                pauseTop: document.getElementById("pauseBtn").getBoundingClientRect().top,
+                modalRestart: !!document.querySelector("#briefOverlay button[onclick*=\\"restartCurrentRun\\"]")
+            };
+        })()`);
+        if (!pauseKeep.brief || pauseKeep.title !== "暂停") throw new Error("pause did not open progress modal");
+        if (!pauseKeep.clears.includes("5 / 20") || !pauseKeep.elapsed.includes("7")) throw new Error("pause lost progress");
+        if (!pauseKeep.same) throw new Error("pause reset the board");
+        if (pauseKeep.footerReset) throw new Error("play footer still resets");
+        if (pauseKeep.pauseText !== "暂停" || pauseKeep.pauseTop > 80) throw new Error("pause should sit at the top");
+        if (!pauseKeep.modalRestart) throw new Error("modal should keep 重新开始");
+        report.push("pause keeps board/progress; 暂停 is at the top; 重新开始 stays in the modal");
+
+        await cdp.send("Emulation.setDeviceMetricsOverride", {
+            width: 900,
+            height: 500,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
+        await cdp.eval("fitPlayLayout()");
+        await sleep(200);
+        const shortWin = await cdp.eval(`(function () {
+            const r = document.getElementById("pauseBtn").getBoundingClientRect();
+            return { top: r.top, bottom: r.bottom, vh: window.innerHeight, text: document.getElementById("pauseBtn").textContent };
+        })()`);
+        if (shortWin.text !== "暂停" || shortWin.top < 0 || shortWin.bottom > shortWin.vh) {
+            throw new Error("pause not visible in short window " + JSON.stringify(shortWin));
+        }
+        await cdp.send("Emulation.clearDeviceMetricsOverride");
+        await cdp.eval("fitPlayLayout()");
+        report.push("pause visible at the top on a 500px-tall window");
+
+        await cdp.eval("resumeFromBrief(); elapsedSec = 91; pauseRun()");
         await sleep(200);
         const timeForfeit = await cdp.eval("document.getElementById('briefStars').innerText");
         if (!timeForfeit.includes("已失去")) throw new Error("time forfeit not shown");
@@ -219,7 +267,33 @@ async function main() {
         if (!win.winShow) throw new Error("win overlay missing");
         if (!win.stars[0] || win.stars[1] || win.stars[2]) throw new Error("expected only star 1 after both forfeits");
         if (win.best !== 91) throw new Error("best time should record 91s");
+        const oneStarPaint = await cdp.eval(`([...document.querySelectorAll("#winStars span")].map(function (s) {
+            return { on: s.classList.contains("on"), color: getComputedStyle(s).color };
+        }))`);
+        if (oneStarPaint.length !== 3 || !oneStarPaint[0].on || oneStarPaint[1].on || oneStarPaint[2].on) {
+            throw new Error("1-star result markup wrong " + JSON.stringify(oneStarPaint));
+        }
+        if (oneStarPaint[0].color === oneStarPaint[1].color) throw new Error("1-star result uses the same color for empty stars");
         report.push("20-clear path: win overlay, only star 1 kept, best time stored");
+
+        await cdp.eval("goHome(); startCampaign('easy'); elapsedSec = 12; hintTriggered = true; finishCampaignWin()");
+        await sleep(200);
+        const twoStarPaint = await cdp.eval(`([...document.querySelectorAll("#winStars span")].map(function (s) {
+            return { on: s.classList.contains("on"), color: getComputedStyle(s).color };
+        }))`);
+        if (!twoStarPaint[0].on || !twoStarPaint[1].on || twoStarPaint[2].on) throw new Error("2-star result markup wrong");
+        if (twoStarPaint[0].color === twoStarPaint[2].color) throw new Error("2-star empty star is not dim");
+        await cdp.eval("goHome(); startCampaign('easy'); elapsedSec = 12; hintTriggered = false; finishCampaignWin()");
+        await sleep(200);
+        const threeStarPaint = await cdp.eval(`([...document.querySelectorAll("#winStars span")].map(function (s) {
+            return { on: s.classList.contains("on"), color: getComputedStyle(s).color };
+        }))`);
+        if (!threeStarPaint.every(function (s) { return s.on; })) throw new Error("3-star result should fill all stars");
+        if (threeStarPaint[0].color !== twoStarPaint[0].color) throw new Error("filled stars should match across results");
+        if (twoStarPaint.filter(function (s) { return s.on; }).length === threeStarPaint.filter(function (s) { return s.on; }).length) {
+            throw new Error("2-star and 3-star look the same");
+        }
+        report.push("results: 1-star and 2-star paint differ from 3-star");
 
         await cdp.eval("goHome()");
         await sleep(200);
@@ -296,6 +370,45 @@ async function main() {
         if (ch.mode !== "challenge") throw new Error("not in challenge mode");
         if (ch.folder !== 105) throw new Error("Challenge catalog should be 105 images, got " + ch.folder);
         report.push("Challenge: 8x4 board, Challange catalog 105 images");
+
+        const hintStart = await cdp.eval(`({
+            charges: hintCharges,
+            label: document.getElementById("hintBtn").textContent,
+            hidden: document.getElementById("hintBtn").classList.contains("hidden")
+        })`);
+        if (hintStart.hidden || hintStart.charges !== 3 || !hintStart.label.includes("3")) {
+            throw new Error("challenge should start with 3 visible hint charges");
+        }
+        await cdp.eval("failSwaps = 9; requestHint(); maybeFlushHint();");
+        await sleep(150);
+        const noAuto = await cdp.eval("document.querySelectorAll('#board .cell.hint').length");
+        if (noAuto) throw new Error("challenge must not auto-hint after missed swaps");
+        await cdp.eval("useChallengeHint()");
+        await sleep(150);
+        const spent = await cdp.eval(`({
+            charges: hintCharges,
+            hints: document.querySelectorAll("#board .cell.hint").length,
+            label: document.getElementById("hintBtn").textContent
+        })`);
+        if (spent.charges !== 2 || spent.hints < 2 || !spent.label.includes("2")) {
+            throw new Error("hint button should spend one charge " + JSON.stringify(spent));
+        }
+        const cap = await cdp.eval(`(function () {
+            hintCharges = 3;
+            hintChargeProgress = 0;
+            for (let i = 0; i < 15; i++) grantChallengeHintProgress();
+            const atCap = { charges: hintCharges, progress: hintChargeProgress };
+            hintCharges = 2;
+            hintChargeProgress = 0;
+            for (let i = 0; i < 9; i++) grantChallengeHintProgress();
+            const nine = { charges: hintCharges, progress: hintChargeProgress };
+            grantChallengeHintProgress();
+            return { atCap: atCap, nine: nine, ten: { charges: hintCharges, progress: hintChargeProgress } };
+        })()`);
+        if (cap.atCap.charges !== 3 || cap.atCap.progress !== 0) throw new Error("clears at cap must not count");
+        if (cap.nine.charges !== 2 || cap.nine.progress !== 9) throw new Error("9 clears below cap should not grant yet");
+        if (cap.ten.charges !== 3 || cap.ten.progress !== 0) throw new Error("10 clears below cap should grant +1");
+        report.push("challenge hints: button-only, 3 start, +1 per 10, cap 3");
 
         await cdp.eval("score = 42; elapsedSec = 17; endChallenge()");
         await sleep(200);

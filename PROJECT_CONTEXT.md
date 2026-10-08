@@ -17,7 +17,8 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - `GalaxyImagesByLevel/` — Easy, Normal, Hard, Challange; five classes each (FaceOnSpirals, EdgeOnDisk, Irregular, Elliptical, Group)
 - `GalaxyImages4Class/` — older four-class set, unused by the current build
 - `GalaxyImages/` — original ~6k set; local only, gitignored
-- `tools/build_index.py` — rebuild `index.html`
+- `tools/rebuild_demo.sh` — one-command rebuild of `index.html` from `GalaxyImagesByLevel/`
+- `tools/build_index.py` — embedder used by the wrapper
 - `tools/game.template.html` — game template
 - `tools/verify_rules.cjs` — class-match, uniqueness/reuse, gravity, constants
 - `tools/verify_browser.cjs` — headless Chrome checks for locks, stars, challenge, PNG
@@ -27,10 +28,12 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 
 - Match by `classId`; unique `class/filename` unless the catalog is smaller than the board (Easy)
 - Board: 6×4 if unique count < 32, else 8×4
-- Gravity from the top; hint after 3 failed swaps or 10s idle
+- Gravity from the top; campaign hint after 3 failed swaps or 10s idle
+- Challenge hints are a top button only (3 charges, +1 per 10 clears, cap 3)
+- Pause is at the top and opens the progress modal without resetting
 - Clear FX: pop then shatter, score pulse; Challenge also **+3s**
 - Progress: `localStorage` key `galaxyGameDemo.progress.v1`
 
 ## Latest update
 
-[update/2026-10-08-three-levels-and-challenge.md](update/2026-10-08-three-levels-and-challenge.md)
+[update/2026-10-08-pause-fit-challenge-hints.md](update/2026-10-08-pause-fit-challenge-hints.md)

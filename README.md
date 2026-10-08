@@ -29,12 +29,15 @@ Progress lives in `localStorage` (`galaxyGameDemo.progress.v1`). The home consol
 
 ## Rebuild
 
+Swap images under `GalaxyImagesByLevel/{Easy,Normal,Hard,Challange}`, then rewrite the playable page:
+
 ```bash
-python3 tools/build_index.py
-node tools/verify_rules.cjs
+./tools/rebuild_demo.sh
 ```
 
-This embeds every JPEG under `GalaxyImagesByLevel/{Easy,Normal,Hard,Challange}`. Template: `tools/game.template.html`.
+Same thing, without the wrapper: `python3 tools/build_index.py`. Both rewrite `index.html` (JPEG data URIs, no gzip). Template: `tools/game.template.html`. Optional check: `node tools/verify_rules.cjs`.
+
+换图后运行上面的命令即可重建可玩的 `index.html`。
 
 ## Dataset
 

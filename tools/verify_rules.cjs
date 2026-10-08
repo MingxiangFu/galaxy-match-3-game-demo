@@ -261,6 +261,9 @@ const required = [
     ["TIME_BONUS = 3", "+3s time bonus"],
     ["FAIL_HINT_COUNT = 3", "3-fail hint"],
     ["IDLE_HINT_MS = 10000", "10s idle hint"],
+    ["HINT_CHARGE_MAX = 3", "challenge hint cap"],
+    ["HINT_CHARGE_EVERY = 10", "challenge hint every 10 clears"],
+    ["useChallengeHint", "challenge hint button"],
     ["STORAGE_KEY = \"galaxyGameDemo.progress.v1\"", "progress storage key"],
     ["CHALLENGE_FOLDER = \"Challange\"", "Challange folder spelling"],
     ["bonus-float", "+3s popup"],
@@ -270,8 +273,15 @@ const required = [
     ["tileFall", "fall animation"],
     ["saveChallengePng", "challenge PNG save"],
     ["unlockChallengeNow", "console unlock"],
-    ["resetAllProgress", "console reset"]
+    ["resetAllProgress", "console reset"],
+    ["win-stars .on", "results filled-star style"],
+    ["fitPlayLayout", "viewport fit"],
+    ["onclick=\"pauseRun()\">暂停", "top pause control"]
 ];
+const playChunk = html.slice(html.indexOf('id="playArea"'), html.indexOf('id="briefOverlay"'));
+if (playChunk.includes("restartCurrentRun")) {
+    throw new Error("play footer should not reset the run");
+}
 for (const [token, label] of required) {
     if (!html.includes(token)) throw new Error("missing " + label);
 }

@@ -23,21 +23,30 @@
 
 html, body {
     margin: 0;
-    min-height: 100%;
+    height: 100%;
 }
 
 body {
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 20px;
+    align-items: flex-start;
+    padding: 12px;
+    overflow: auto;
     color: var(--ink);
     font-family: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     background:
         radial-gradient(1200px 600px at 10% -10%, #1e3a8a 0%, transparent 55%),
         radial-gradient(900px 500px at 110% 10%, #4c1d95 0%, transparent 50%),
         linear-gradient(160deg, var(--bg0), var(--bg1));
+}
+
+body.playing {
+    height: 100dvh;
+    max-height: 100dvh;
+    align-items: stretch;
+    overflow: hidden;
+    padding: 8px;
 }
 
 .home-shell, .game {
@@ -48,6 +57,19 @@ body {
     border-radius: 26px;
     box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(10px);
+}
+
+.home-shell {
+    margin: auto;
+}
+
+.game {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+    min-height: 0;
 }
 
 .home-header h1, .title-block h1 {
@@ -166,7 +188,8 @@ body {
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .title-block .subtitle {
@@ -178,8 +201,25 @@ body {
 
 .nav-row {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--card);
+}
+
+.nav-right {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+#pauseBtn {
+    background: linear-gradient(135deg, #38bdf8, #1d4ed8);
 }
 
 .stats {
@@ -221,12 +261,13 @@ body {
 }
 
 .lesson {
-    min-height: 64px;
-    margin-bottom: 12px;
-    padding: 12px 14px;
+    min-height: 0;
+    margin-bottom: 8px;
+    padding: 10px 14px;
     border-radius: 14px;
     background: rgba(125, 211, 252, 0.08);
     border: 1px solid rgba(125, 211, 252, 0.16);
+    flex-shrink: 0;
 }
 
 .lesson .kicker {
@@ -243,8 +284,20 @@ body {
     color: var(--ink);
 }
 
+#playArea {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .board-wrap {
     position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 8px;
     border-radius: 20px;
     background: linear-gradient(135deg, #334155, #0f172a);
@@ -255,6 +308,9 @@ body {
 .board {
     position: relative;
     width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
     aspect-ratio: var(--cols) / var(--rows);
     display: grid;
     grid-template-columns: repeat(var(--cols), 1fr);
@@ -431,7 +487,8 @@ body {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 8px;
+    flex-shrink: 0;
 }
 
 .legend-item {
@@ -473,7 +530,8 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin-top: 12px;
+    margin-top: 8px;
+    flex-shrink: 0;
 }
 
 .message {
@@ -590,6 +648,11 @@ body {
     font-size: 28px;
     letter-spacing: 0.16em;
     margin: 8px 0 16px;
+    color: rgba(251, 191, 36, 0.28);
+}
+
+.win-stars .on {
+    color: var(--gold);
 }
 
 .status-screen {
@@ -622,7 +685,15 @@ body {
     .title-block h1 { font-size: 20px; }
     .board { gap: 3px; padding: 4px; }
     .bonus-float { font-size: 20px; }
-    .footer { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-height: 760px) {
+    .lesson p { font-size: 12px; }
+    .legend-item img { width: 28px; height: 28px; }
+    .legend-item span { font-size: 10px; }
+    .title-block h1 { font-size: 18px; }
+    .stat { padding: 6px 8px; }
+    .stat strong { font-size: 16px; }
 }
 </style>
 </head>
@@ -647,7 +718,10 @@ body {
 <div id="gameShell" class="game hidden">
     <div class="nav-row">
         <button class="btn ghost" type="button" onclick="goHome()">返回主页</button>
-        <button id="pauseBtn" class="btn ghost" type="button" onclick="pauseRun()">暂停</button>
+        <div class="nav-right">
+            <button id="hintBtn" class="btn ghost hidden" type="button" onclick="useChallengeHint()">提示 3</button>
+            <button id="pauseBtn" class="btn" type="button" onclick="pauseRun()">暂停</button>
+        </div>
     </div>
     <div class="header">
         <div class="title-block">
@@ -678,9 +752,6 @@ body {
         <div id="legend" class="legend"></div>
         <div class="footer">
             <div id="message" class="message">点击相邻星系进行交换</div>
-            <div class="footer-actions">
-                <button class="restart" type="button" onclick="restartCurrentRun()">重新开始</button>
-            </div>
         </div>
     </div>
 </div>
@@ -770,6 +841,8 @@ const GAME_TIME = 60;
 const TIME_BONUS = 3;
 const FAIL_HINT_COUNT = 3;
 const IDLE_HINT_MS = 10000;
+const HINT_CHARGE_MAX = 3;
+const HINT_CHARGE_EVERY = 10;
 const STORAGE_KEY = "galaxyGameDemo.progress.v1";
 const CHALLENGE_FOLDER = "Challange";
 
@@ -821,6 +894,8 @@ let hintPair = null;
 let idleHintTimer = null;
 let pendingHint = false;
 let hintTriggered = false;
+let hintCharges = HINT_CHARGE_MAX;
+let hintChargeProgress = 0;
 let runEnded = false;
 
 function defaultProgress() {
@@ -1200,6 +1275,30 @@ function mountBoard() {
         }
     }
     refreshSelection();
+    fitPlayLayout();
+}
+
+function fitPlayLayout() {
+    const shell = document.getElementById("gameShell");
+    const wrap = document.getElementById("boardWrap");
+    const boardEl = document.getElementById("board");
+    if (!shell || !wrap || !boardEl || shell.classList.contains("hidden")) return;
+    wrap.style.height = "";
+    boardEl.style.width = "";
+    boardEl.style.height = "";
+    const footer = document.querySelector("#playArea .footer");
+    const legend = document.getElementById("legend");
+    const wrapTop = wrap.getBoundingClientRect().top;
+    const below = (legend ? legend.getBoundingClientRect().height : 0) +
+        (footer ? footer.getBoundingClientRect().height : 0) + 16;
+    const available = Math.floor(window.innerHeight - wrapTop - below);
+    const maxH = Math.max(120, available);
+    const maxW = Math.max(120, wrap.clientWidth - 16);
+    const cell = Math.max(18, Math.floor(Math.min(maxW / COLS, maxH / ROWS)));
+    boardEl.style.width = (cell * COLS) + "px";
+    boardEl.style.height = (cell * ROWS) + "px";
+    boardEl.style.maxWidth = "100%";
+    boardEl.style.maxHeight = maxH + "px";
 }
 
 function refreshSelection() {
@@ -1351,7 +1450,7 @@ async function clickCell(r, c) {
         await sleep(220);
         document.getElementById("message").textContent = "点击相邻星系进行交换";
         locked = false;
-        if (failSwaps >= FAIL_HINT_COUNT) requestHint();
+        if (mode !== "challenge" && failSwaps >= FAIL_HINT_COUNT) requestHint();
         maybeFlushHint();
         return;
     }
@@ -1423,7 +1522,7 @@ function restartIdleHintTimer() {
         clearTimeout(idleHintTimer);
         idleHintTimer = null;
     }
-    if (paused || runEnded || mode === "home") return;
+    if (paused || runEnded || mode === "home" || mode === "challenge") return;
     idleHintTimer = setTimeout(function () {
         requestHint("idle");
     }, IDLE_HINT_MS);
@@ -1459,20 +1558,26 @@ function applyHintClasses() {
     if (b) b.classList.add("hint");
 }
 
-function showHint() {
-    if (hintPair || runEnded || paused) return;
-    if (mode === "challenge" && timeLeft <= 0) return;
+function revealHintPair() {
+    if (hintPair || runEnded || paused) return false;
+    if (mode === "challenge" && timeLeft <= 0) return false;
     const pairs = findValidSwaps();
-    if (!pairs.length) return;
+    if (!pairs.length) return false;
     hintPair = pairs[Math.floor(Math.random() * pairs.length)];
-    hintTriggered = true;
     applyHintClasses();
     document.getElementById("message").textContent = "提示：试试高亮的两个格子";
+    return true;
+}
+
+function showHint() {
+    if (mode === "challenge") return;
+    if (!revealHintPair()) return;
+    hintTriggered = true;
 }
 
 function requestHint() {
+    if (mode === "challenge") return;
     if (hintPair || runEnded || paused) return;
-    if (mode === "challenge" && timeLeft <= 0) return;
     if (locked) {
         pendingHint = true;
         return;
@@ -1481,10 +1586,53 @@ function requestHint() {
 }
 
 function maybeFlushHint() {
+    if (mode === "challenge") return;
     if (pendingHint && !hintPair && !locked && !paused && !runEnded) {
         pendingHint = false;
         showHint();
     }
+}
+
+function updateHintButton() {
+    const btn = document.getElementById("hintBtn");
+    if (!btn) return;
+    if (mode !== "challenge") {
+        btn.classList.add("hidden");
+        btn.disabled = true;
+        return;
+    }
+    btn.classList.remove("hidden");
+    btn.textContent = "提示 " + hintCharges;
+    btn.disabled = hintCharges <= 0 || paused || runEnded || locked;
+}
+
+function grantChallengeHintProgress() {
+    if (mode !== "challenge") return;
+    if (hintCharges >= HINT_CHARGE_MAX) return;
+    hintChargeProgress += 1;
+    if (hintChargeProgress >= HINT_CHARGE_EVERY) {
+        hintCharges = Math.min(HINT_CHARGE_MAX, hintCharges + 1);
+        hintChargeProgress = 0;
+    }
+    updateHintButton();
+}
+
+function useChallengeHint() {
+    if (mode !== "challenge" || paused || runEnded || locked) return;
+    if (hintCharges <= 0) {
+        document.getElementById("message").textContent = "没有提示次数了";
+        return;
+    }
+    if (hintPair) {
+        document.getElementById("message").textContent = "已经高亮了一对可消除的格子";
+        return;
+    }
+    if (!revealHintPair()) {
+        document.getElementById("message").textContent = "当前没有可提示的交换";
+        return;
+    }
+    hintCharges -= 1;
+    updateHintButton();
 }
 
 function rowStridePx() {
@@ -1624,6 +1772,7 @@ async function clearMatches() {
         addScore(baseScore + comboBonus);
         addTimeBonus();
         clearsDone += 1;
+        grantChallengeHintProgress();
         updateHud();
         pulseScore();
 
@@ -1858,6 +2007,7 @@ function pauseRun() {
     stopClocks();
     selected = null;
     refreshSelection();
+    updateHintButton();
     if (mode === "campaign") {
         showBrief("pause");
         return;
@@ -1868,7 +2018,7 @@ function pauseRun() {
     document.getElementById("briefClears").textContent = "得分 " + score;
     document.getElementById("briefElapsed").textContent = timeLeft + "s 剩余";
     document.getElementById("briefStars").innerHTML =
-        "<li><span>计时到 0 结束</span><span class=\"tag\">每次消除 +" + TIME_BONUS + "s</span></li>";
+        "<li><span>提示次数 " + hintCharges + " / " + HINT_CHARGE_MAX + "</span><span class=\"tag\">每次消除 +" + TIME_BONUS + "s</span></li>";
 }
 
 function resumeFromBrief() {
@@ -1877,6 +2027,8 @@ function resumeFromBrief() {
     paused = false;
     startPlayClock();
     restartIdleHintTimer();
+    updateHintButton();
+    fitPlayLayout();
 }
 
 function startPlayClock() {
@@ -1920,7 +2072,7 @@ function prepareBoard() {
         showStatus(
             "error",
             "No galaxy images found",
-            "目录为空。请确认 GalaxyImagesByLevel/ 后运行 python3 tools/build_index.py。"
+            "目录为空。请确认 GalaxyImagesByLevel/ 后运行 ./tools/rebuild_demo.sh。"
         );
         return false;
     }
@@ -1953,10 +2105,13 @@ function prepareBoard() {
     renderLegend();
     mountBoard();
     updateHud();
+    updateHintButton();
+    fitPlayLayout();
     return true;
 }
 
 function showGameShell() {
+    document.body.classList.add("playing");
     document.getElementById("homeScreen").classList.add("hidden");
     document.getElementById("gameShell").classList.remove("hidden");
 }
@@ -1968,8 +2123,10 @@ function goHome() {
     currentLevelId = null;
     stopClocks();
     hideOverlays();
+    document.body.classList.remove("playing");
     document.getElementById("gameShell").classList.add("hidden");
     document.getElementById("homeScreen").classList.remove("hidden");
+    updateHintButton();
     renderHome();
 }
 
@@ -1987,8 +2144,11 @@ function startCampaign(levelId) {
     elapsedSec = 0;
     timeLeft = 0;
     hintTriggered = false;
+    hintCharges = HINT_CHARGE_MAX;
+    hintChargeProgress = 0;
     document.getElementById("playTitle").textContent = meta.title;
     document.getElementById("pauseBtn").classList.remove("hidden");
+    updateHintButton();
     setLesson("How to play · 玩法", meta.copy + " 同一形态类连成三个即可消除。成功消除 " + CLEARS_TO_WIN + " 次通关。");
     showGameShell();
     if (!prepareBoard()) return;
@@ -2008,16 +2168,21 @@ function startChallenge() {
     elapsedSec = 0;
     timeLeft = GAME_TIME;
     hintTriggered = false;
+    hintCharges = HINT_CHARGE_MAX;
+    hintChargeProgress = 0;
     document.getElementById("playTitle").textContent = "挑战模式";
     document.getElementById("pauseBtn").classList.remove("hidden");
     setLesson(
         "Challenge · 挑战",
-        "最大图库。交换相邻格子，同类三消得分，并获得 +" + TIME_BONUS + "s。计时到 0 结束。"
+        "最大图库。交换相邻格子，同类三消得分，并获得 +" + TIME_BONUS + "s。点顶部「提示」高亮一对，开局 3 次，每 10 次成功消除 +1，最多 3 次。计时到 0 结束。"
     );
     showGameShell();
     if (!prepareBoard()) return;
     startPlayClock();
-    resetHintTracking();
+    failSwaps = 0;
+    pendingHint = false;
+    dismissHint();
+    updateHintButton();
 }
 
 function restartCurrentRun() {
@@ -2107,6 +2272,7 @@ function sleep(ms) {
 
 progress = loadProgress();
 renderHome();
+window.addEventListener("resize", fitPlayLayout);
 </script>
 </body>
 </html>
