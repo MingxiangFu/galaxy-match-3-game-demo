@@ -6,7 +6,7 @@
 <title>星系分类消消乐 · Galaxy Match</title>
 <style>
 :root {
-    --cols: 8;
+    --cols: 6;
     --rows: 4;
     --bg0: #070b16;
     --bg1: #152446;
@@ -40,7 +40,7 @@ body {
         linear-gradient(160deg, var(--bg0), var(--bg1));
 }
 
-.game {
+.home-shell, .game {
     width: min(1080px, 96vw);
     padding: 22px;
     background: var(--card);
@@ -48,6 +48,117 @@ body {
     border-radius: 26px;
     box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(10px);
+}
+
+.home-header h1, .title-block h1 {
+    margin: 0;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #fff;
+}
+
+.lede {
+    margin: 8px 0 18px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+    font-weight: 600;
+}
+
+.level-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.level-card, .challenge-card {
+    text-align: left;
+    border: 1px solid rgba(125, 211, 252, 0.18);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--ink);
+    border-radius: 18px;
+    padding: 16px;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.level-card:hover:not(.locked), .challenge-card:hover:not(.locked) {
+    border-color: rgba(125, 211, 252, 0.55);
+    transform: translateY(-1px);
+}
+
+.level-card.locked, .challenge-card.locked {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.card-kicker {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.level-card h2, .challenge-card h2 {
+    margin: 6px 0 8px;
+    font-size: 22px;
+}
+
+.card-copy {
+    margin: 0 0 12px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+    font-weight: 600;
+}
+
+.stars {
+    letter-spacing: 0.12em;
+    font-size: 18px;
+    color: rgba(251, 191, 36, 0.28);
+}
+
+.stars .on { color: var(--gold); }
+
+.best-time {
+    margin-top: 8px;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.lock-note {
+    margin-top: 8px;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.challenge-card {
+    width: 100%;
+    margin-top: 12px;
+}
+
+.console-box {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed rgba(154, 168, 199, 0.35);
+}
+
+.console-box summary {
+    cursor: pointer;
+    font-weight: 800;
+    color: var(--muted);
+}
+
+.console-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .header {
@@ -58,19 +169,17 @@ body {
     margin-bottom: 12px;
 }
 
-.title-block h1 {
-    margin: 0;
-    font-size: clamp(22px, 4vw, 32px);
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    color: #fff;
-}
-
-.subtitle {
+.title-block .subtitle {
     margin-top: 4px;
     color: var(--muted);
     font-size: 13px;
     font-weight: 600;
+}
+
+.nav-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .stats {
@@ -101,7 +210,7 @@ body {
 .stat.time strong { color: var(--danger); }
 .stat.combo strong { color: #c084fc; }
 
-#score.score-pop {
+#score.score-pop, #clears.score-pop {
     animation: scorePop 0.45s ease;
 }
 
@@ -242,12 +351,8 @@ body {
 }
 
 @keyframes hintBlink {
-    0%, 100% {
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
-    }
-    50% {
-        box-shadow: 0 0 0 3px #fff, 0 0 18px rgba(255, 255, 255, 0.95);
-    }
+    0%, 100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); }
+    50% { box-shadow: 0 0 0 3px #fff, 0 0 18px rgba(255, 255, 255, 0.95); }
 }
 
 .combo-burst {
@@ -324,7 +429,7 @@ body {
 
 .legend {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     margin-top: 12px;
 }
@@ -377,7 +482,7 @@ body {
     font-weight: 700;
 }
 
-.restart {
+.btn, .restart, .modal button {
     border: 0;
     padding: 10px 18px;
     border-radius: 12px;
@@ -389,7 +494,18 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
 }
 
-.restart:hover { transform: translateY(-1px); }
+.btn.ghost, .modal button.ghost {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+.btn.danger, .modal button.danger {
+    background: linear-gradient(135deg, #fb7185, #be123c);
+}
+
+.btn:hover, .restart:hover { transform: translateY(-1px); }
+
+.footer-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 .overlay {
     position: fixed;
@@ -400,14 +516,15 @@ body {
     align-items: center;
     background: rgba(2, 6, 23, 0.72);
     backdrop-filter: blur(6px);
+    padding: 16px;
 }
 
 .overlay.show { display: flex; }
 
 .modal {
-    width: min(440px, 90vw);
-    padding: 32px;
-    text-align: center;
+    width: min(480px, 92vw);
+    padding: 28px;
+    text-align: left;
     border-radius: 24px;
     background: #0f172a;
     border: 1px solid rgba(125, 211, 252, 0.25);
@@ -416,26 +533,63 @@ body {
 
 .modal h2 {
     margin: 0;
-    font-size: 28px;
+    font-size: 26px;
     color: var(--gold);
+    text-align: center;
 }
 
-.modal p {
-    margin: 14px 0 22px;
+.modal .lead {
+    margin: 12px 0 16px;
     color: var(--muted);
     line-height: 1.5;
+    text-align: center;
 }
 
-.modal button {
-    width: 100%;
-    border: 0;
-    padding: 13px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #38bdf8, #1d4ed8);
-    color: white;
-    font-size: 16px;
-    font-weight: 800;
-    cursor: pointer;
+.progress-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0;
+    font-weight: 700;
+}
+
+.star-list {
+    list-style: none;
+    margin: 12px 0 18px;
+    padding: 0;
+}
+
+.star-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.star-list li.lost { color: var(--danger); }
+.star-list li.earned { color: var(--gold); }
+.star-list .tag { color: var(--muted); font-size: 12px; }
+.star-list li.lost .tag { color: var(--danger); }
+.star-list li.earned .tag { color: var(--gold); }
+
+.modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal button { width: 100%; padding: 13px; font-size: 16px; }
+
+.win-stars {
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 0.16em;
+    margin: 8px 0 16px;
 }
 
 .status-screen {
@@ -449,41 +603,60 @@ body {
     color: var(--muted);
 }
 
-.status-screen h2 {
-    margin: 0;
-    color: var(--ink);
-}
-
+.status-screen h2 { margin: 0; color: var(--ink); }
 .status-screen.error h2 { color: var(--danger); }
 
 .hidden { display: none !important; }
 
 @media (max-width: 900px) {
+    .level-grid { grid-template-columns: 1fr; }
     .legend { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 700px) {
     body { padding: 8px; }
-    .game { width: 100%; padding: 10px; border-radius: 18px; }
+    .home-shell, .game { width: 100%; padding: 10px; border-radius: 18px; }
     .header { flex-direction: column; gap: 8px; }
     .stats { width: 100%; }
     .stat { flex: 1; min-width: 0; }
     .title-block h1 { font-size: 20px; }
     .board { gap: 3px; padding: 4px; }
     .bonus-float { font-size: 20px; }
+    .footer { flex-direction: column; align-items: stretch; }
 }
 </style>
 </head>
 <body>
-<div class="game">
+<div id="homeScreen" class="home-shell">
+    <div class="home-header">
+        <h1>星系分类消消乐</h1>
+    </div>
+    <p class="lede">按形态类别匹配不同照片。简单、普通、困难使用同一套五类（含星系团），同类图像多样性逐步升高。通关一关可解锁下一关；集齐 9 星后开启挑战模式。</p>
+    <div id="levelGrid" class="level-grid"></div>
+    <button id="challengeCard" class="challenge-card" type="button"></button>
+    <details id="consoleBox" class="console-box">
+        <summary>进度控制台</summary>
+        <p class="card-copy">本地进度保存在本机浏览器中，没有账号。可用于重置或立刻开放挑战。</p>
+        <div class="console-actions">
+            <button class="btn danger" type="button" onclick="resetAllProgress()">重置全部进度</button>
+            <button class="btn ghost" type="button" onclick="unlockChallengeNow()">立即解锁挑战模式</button>
+        </div>
+    </details>
+</div>
+
+<div id="gameShell" class="game hidden">
+    <div class="nav-row">
+        <button class="btn ghost" type="button" onclick="goHome()">返回主页</button>
+        <button id="pauseBtn" class="btn ghost" type="button" onclick="pauseRun()">暂停</button>
+    </div>
     <div class="header">
         <div class="title-block">
-            <h1>星系分类消消乐</h1>
+            <h1 id="playTitle">星系分类消消乐</h1>
             <div id="subtitle" class="subtitle">Galaxy morphology match-3</div>
         </div>
         <div class="stats">
-            <div class="stat">分数<strong id="score">0</strong></div>
-            <div class="stat time">时间<strong><span id="time">60</span>s</strong></div>
+            <div id="statPrimary" class="stat">分数<strong id="score">0</strong></div>
+            <div class="stat time">时间<strong><span id="time">0</span></strong></div>
             <div class="stat combo">连消<strong id="combo">0</strong></div>
         </div>
     </div>
@@ -493,7 +666,7 @@ body {
         <p>同一形态类的不同照片可以消除。Matching is by class (folder), not by identical image.</p>
     </div>
 
-    <div id="status" class="status-screen">
+    <div id="status" class="status-screen hidden">
         <h2>Loading galaxy catalog…</h2>
         <p>正在载入嵌入的星系图像。</p>
     </div>
@@ -505,22 +678,57 @@ body {
         <div id="legend" class="legend"></div>
         <div class="footer">
             <div id="message" class="message">点击相邻星系进行交换</div>
-            <button class="restart" type="button" onclick="restartGame()">重新开始</button>
+            <div class="footer-actions">
+                <button class="restart" type="button" onclick="restartCurrentRun()">重新开始</button>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="gameOver" class="overlay">
+<div id="briefOverlay" class="overlay">
+    <div class="modal">
+        <h2 id="briefTitle">关卡说明</h2>
+        <p id="briefLead" class="lead"></p>
+        <div class="progress-line"><span>成功消除</span><strong id="briefClears">0 / 20</strong></div>
+        <div class="progress-line"><span>已用时间</span><strong id="briefElapsed">0s</strong></div>
+        <ul id="briefStars" class="star-list"></ul>
+        <div class="modal-actions">
+            <button type="button" onclick="resumeFromBrief()">继续</button>
+            <button class="ghost" type="button" onclick="restartCurrentRun()">重新开始</button>
+            <button class="ghost" type="button" onclick="goHome()">返回主页</button>
+        </div>
+    </div>
+</div>
+
+<div id="winOverlay" class="overlay">
+    <div class="modal">
+        <h2>通关成功</h2>
+        <p id="winLead" class="lead"></p>
+        <div id="winStars" class="win-stars"></div>
+        <div class="modal-actions">
+            <button type="button" onclick="goHome()">返回主页</button>
+            <button class="ghost" type="button" onclick="restartCurrentRun()">再玩一次</button>
+        </div>
+    </div>
+</div>
+
+<div id="challengeOverlay" class="overlay">
     <div class="modal">
         <h2>时间到</h2>
-        <p>最终得分<br><strong id="finalScore" style="color:#fbbf24;font-size:36px">0</strong></p>
-        <button type="button" onclick="restartGame()">再观察一轮</button>
+        <p class="lead">挑战结束。可保存一张含分数与时长的成绩图。</p>
+        <div class="progress-line"><span>得分</span><strong id="finalScore">0</strong></div>
+        <div class="progress-line"><span>本局时长</span><strong id="finalDuration">0s</strong></div>
+        <div class="modal-actions">
+            <button type="button" onclick="saveChallengePng()">保存成绩图</button>
+            <button class="ghost" type="button" onclick="restartCurrentRun()">再来一局</button>
+            <button class="ghost" type="button" onclick="goHome()">返回主页</button>
+        </div>
     </div>
 </div>
 
 <script>
-/* Galaxy class copy: English names stay visible; player-facing notes are Chinese. */
-const CLASS_ORDER = ["FaceOnSpirals", "EdgeOnDisk", "Irregular", "Smooth"];
+/* Player-facing copy is Chinese. Identifiers and comments stay in English. */
+const CLASS_ORDER = ["FaceOnSpirals", "EdgeOnDisk", "Irregular", "Elliptical", "Group"];
 
 const CLASS_INFO = {
     FaceOnSpirals: {
@@ -541,35 +749,199 @@ const CLASS_INFO = {
         select: "不规则星系（Irregular）：没有稳定的盘或对称旋臂，外形不规则。",
         match: "不规则星系外形可以差很多，正因为缺少规则结构才归为一类。"
     },
-    Smooth: {
-        en: "Smooth",
-        zh: "平滑星系",
-        select: "平滑星系（Smooth）：光分布平滑，几乎没有旋臂或团块，常见于椭圆星系。",
-        match: "平滑星系没有旋臂细节，亮度从中心向外平稳下降。"
+    Elliptical: {
+        en: "Elliptical",
+        zh: "椭圆星系",
+        select: "椭圆星系（Elliptical）：外形平滑、近似椭圆，几乎没有旋臂或尘埃带。",
+        match: "椭圆星系光分布平滑，亮度从中心向外平稳下降。"
+    },
+    Group: {
+        en: "Galaxy cluster",
+        zh: "星系团",
+        select: "星系团（Galaxy cluster）：画面里有多个星系聚在一起，而不是单个天体。",
+        match: "星系团的匹配看的是“一群星系”，不要把它当成单独的旋涡或椭圆。"
     }
 };
 
 const GALAXY_DATA = __GALAXY_DATA__;
+const CLEARS_TO_WIN = 20;
+const STAR_TIME_LIMIT = 90;
 const GAME_TIME = 60;
 const TIME_BONUS = 3;
 const FAIL_HINT_COUNT = 3;
 const IDLE_HINT_MS = 10000;
+const STORAGE_KEY = "galaxyGameDemo.progress.v1";
+const CHALLENGE_FOLDER = "Challange";
 
+const LEVEL_ORDER = ["easy", "normal", "hard"];
+const LEVEL_META = {
+    easy: {
+        id: "easy",
+        folder: "Easy",
+        title: "简单",
+        kicker: "EASY",
+        copy: "每类只有一张代表图。先认识五种形态；棋盘上会重复同一张图。多样性最低。"
+    },
+    normal: {
+        id: "normal",
+        folder: "Normal",
+        title: "普通",
+        kicker: "NORMAL",
+        copy: "每类有多张不同照片。同类外形开始出现差异，需要按形态而不是按同一张图来认。"
+    },
+    hard: {
+        id: "hard",
+        folder: "Hard",
+        title: "困难",
+        kicker: "HARD",
+        copy: "同类照片更多、形态更杂。棋盘更大，需要更仔细辨认细微差别。"
+    }
+};
+
+let progress = defaultProgress();
+let mode = "home";
+let currentLevelId = null;
+let activeCatalog = [];
 let ROWS = 4;
-let COLS = 8;
+let COLS = 6;
 let board = [];
 let selected = null;
 let score = 0;
 let timeLeft = GAME_TIME;
+let elapsedSec = 0;
 let combo = 0;
+let clearsDone = 0;
 let timer = null;
 let locked = false;
+let paused = false;
 let imageErrors = 0;
 let boardClickBound = false;
 let failSwaps = 0;
 let hintPair = null;
 let idleHintTimer = null;
 let pendingHint = false;
+let hintTriggered = false;
+let runEnded = false;
+
+function defaultProgress() {
+    return {
+        stars: {
+            easy: [false, false, false],
+            normal: [false, false, false],
+            hard: [false, false, false]
+        },
+        bestTime: { easy: null, normal: null, hard: null },
+        challengeUnlocked: false
+    };
+}
+
+function loadProgress() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultProgress();
+        const parsed = JSON.parse(raw);
+        const next = defaultProgress();
+        LEVEL_ORDER.forEach(function (id) {
+            const stars = parsed.stars && parsed.stars[id];
+            if (Array.isArray(stars)) {
+                next.stars[id] = [0, 1, 2].map(function (i) { return !!stars[i]; });
+            }
+            if (parsed.bestTime && typeof parsed.bestTime[id] === "number") {
+                next.bestTime[id] = parsed.bestTime[id];
+            }
+        });
+        next.challengeUnlocked = !!parsed.challengeUnlocked;
+        return next;
+    } catch (err) {
+        return defaultProgress();
+    }
+}
+
+function saveProgress() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function totalStars() {
+    let n = 0;
+    LEVEL_ORDER.forEach(function (id) {
+        progress.stars[id].forEach(function (on) { if (on) n += 1; });
+    });
+    return n;
+}
+
+function levelUnlocked(id) {
+    if (id === "easy") return true;
+    if (id === "normal") return progress.stars.easy.some(Boolean);
+    if (id === "hard") return progress.stars.normal.some(Boolean);
+    return false;
+}
+
+function challengeUnlocked() {
+    return progress.challengeUnlocked || totalStars() >= 9;
+}
+
+function starMarkup(stars) {
+    return [0, 1, 2].map(function (i) {
+        return '<span class="' + (stars[i] ? "on" : "") + '">★</span>';
+    }).join("");
+}
+
+function formatBest(sec) {
+    if (sec == null) return "尚未通关";
+    return "最佳通关 " + sec + "s";
+}
+
+function renderHome() {
+    const grid = document.getElementById("levelGrid");
+    grid.innerHTML = "";
+    LEVEL_ORDER.forEach(function (id) {
+        const meta = LEVEL_META[id];
+        const open = levelUnlocked(id);
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "level-card" + (open ? "" : " locked");
+        card.dataset.level = id;
+        card.innerHTML =
+            '<div class="card-kicker">' + meta.kicker + "</div>" +
+            "<h2>" + meta.title + "</h2>" +
+            '<p class="card-copy">' + meta.copy + "</p>" +
+            '<div class="stars">' + starMarkup(progress.stars[id]) + "</div>" +
+            '<div class="best-time">' + formatBest(progress.bestTime[id]) + "</div>" +
+            (open ? "" : '<div class="lock-note">通关上一关后解锁</div>');
+        card.onclick = function () {
+            if (!levelUnlocked(id)) return;
+            startCampaign(id);
+        };
+        grid.appendChild(card);
+    });
+
+    const challenge = document.getElementById("challengeCard");
+    const open = challengeUnlocked();
+    challenge.className = "challenge-card" + (open ? "" : " locked");
+    challenge.innerHTML =
+        '<div class="card-kicker">CHALLENGE</div>' +
+        " <h2>挑战模式</h2>" +
+        '<p class="card-copy">使用 Challange 图库的五类照片。保留分数与倒计时：每次成功消除 +' + TIME_BONUS + " 秒，计时到 0 结束。集齐 9 星后解锁。</p>" +
+        '<div class="stars">' + starMarkup([open, open, open]) + "</div>" +
+        '<div class="best-time">' + totalStars() + " / 9 星</div>" +
+        (open ? "" : '<div class="lock-note">集齐 9 星后解锁，或使用下方控制台立即开放</div>');
+    challenge.onclick = function () {
+        if (!challengeUnlocked()) return;
+        startChallenge();
+    };
+}
+
+function resetAllProgress() {
+    progress = defaultProgress();
+    saveProgress();
+    renderHome();
+}
+
+function unlockChallengeNow() {
+    progress.challengeUnlocked = true;
+    saveProgress();
+    renderHome();
+}
 
 function classLabel(classId) {
     const info = CLASS_INFO[classId];
@@ -578,24 +950,9 @@ function classLabel(classId) {
 }
 
 function sizeBoardFromUniqueCount(uniqueCount) {
-    /* Board cells never exceed unique images, so every cell can show a distinct file.
-       Leave about one third of the catalog unused so new tiles can prefer unseen files. */
-    if (uniqueCount < 9) {
-        return { rows: 0, cols: 0, cells: 0 };
-    }
-    const cells = Math.min(uniqueCount, Math.max(9, Math.floor(uniqueCount * 2 / 3)));
-    let cols = Math.round(Math.sqrt(cells * 2));
-    cols = Math.max(3, Math.min(cols, cells));
-    let rows = Math.floor(cells / cols);
-    if (rows < 3) {
-        rows = 3;
-        cols = Math.max(3, Math.floor(cells / rows));
-    }
-    while (rows * cols > uniqueCount) {
-        if (cols > 3) cols -= 1;
-        else rows -= 1;
-    }
-    return { rows: rows, cols: cols, cells: rows * cols };
+    /* 6x4 below 32 unique images; 8x4 once the catalog is large enough. */
+    if (uniqueCount >= 32) return { rows: 4, cols: 8, cells: 32 };
+    return { rows: 4, cols: 6, cells: 24 };
 }
 
 function showStatus(kind, title, detail) {
@@ -619,7 +976,7 @@ function setLesson(kicker, text) {
 
 function catalogByClass() {
     const groups = {};
-    GALAXY_DATA.forEach(function (item) {
+    activeCatalog.forEach(function (item) {
         if (!groups[item.classId]) groups[item.classId] = [];
         groups[item.classId].push(item);
     });
@@ -637,9 +994,9 @@ function idsOnBoard() {
 }
 
 function pickUnusedTile(avoidClassId, usedIds) {
-    /* Prefer catalog entries whose image file is not currently on the board. */
+    /* Prefer a class/filename not already on the board. Reuse only when the unused pool is empty (Easy). */
     const occupied = usedIds || idsOnBoard();
-    let unused = GALAXY_DATA.filter(function (item) {
+    let unused = activeCatalog.filter(function (item) {
         return !occupied.has(item.id);
     });
     if (avoidClassId) {
@@ -648,8 +1005,18 @@ function pickUnusedTile(avoidClassId, usedIds) {
         });
         if (filtered.length) unused = filtered;
     }
-    if (!unused.length) return null;
-    return unused[Math.floor(Math.random() * unused.length)];
+    if (unused.length) {
+        return unused[Math.floor(Math.random() * unused.length)];
+    }
+    let pool = activeCatalog;
+    if (avoidClassId) {
+        const filtered = pool.filter(function (item) {
+            return item.classId !== avoidClassId;
+        });
+        if (filtered.length) pool = filtered;
+    }
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function wouldOpenMatch(r, c, classId) {
@@ -675,6 +1042,10 @@ function cloneTile(item) {
         file: item.file,
         src: item.src
     };
+}
+
+function uniquenessRequired() {
+    return activeCatalog.length >= ROWS * COLS;
 }
 
 function initBoard() {
@@ -707,6 +1078,7 @@ function uniqueImageCountOnBoard() {
             if (tile) ids.push(tile.id);
         });
     });
+    if (!uniquenessRequired()) return true;
     return new Set(ids).size === ids.length;
 }
 
@@ -802,6 +1174,8 @@ function mountBoard() {
     const boardElement = document.getElementById("board");
     boardElement.style.setProperty("--cols", String(COLS));
     boardElement.style.setProperty("--rows", String(ROWS));
+    document.documentElement.style.setProperty("--cols", String(COLS));
+    document.documentElement.style.setProperty("--rows", String(ROWS));
     boardElement.innerHTML = "";
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
@@ -837,12 +1211,6 @@ function refreshSelection() {
     });
 }
 
-function updateHud() {
-    document.getElementById("score").textContent = String(score);
-    document.getElementById("time").textContent = String(timeLeft);
-    document.getElementById("combo").textContent = String(combo);
-}
-
 function pulseScore() {
     const el = document.getElementById("score");
     el.classList.remove("score-pop");
@@ -858,8 +1226,21 @@ function addScore(delta) {
 }
 
 function addTimeBonus() {
+    if (mode !== "challenge") return;
     timeLeft += TIME_BONUS;
-    document.getElementById("time").textContent = String(timeLeft);
+    updateHud();
+}
+
+function updateHud() {
+    const primary = document.getElementById("statPrimary");
+    if (mode === "campaign") {
+        primary.innerHTML = '消除<strong id="score">' + clearsDone + " / " + CLEARS_TO_WIN + "</strong>";
+        document.getElementById("time").textContent = elapsedSec + "s";
+    } else {
+        primary.innerHTML = '分数<strong id="score">' + score + "</strong>";
+        document.getElementById("time").textContent = timeLeft + "s";
+    }
+    document.getElementById("combo").textContent = String(combo);
 }
 
 function renderLegend() {
@@ -906,8 +1287,13 @@ function swapCellContents(a, b) {
     cellB.title = titleA;
 }
 
+function playLocked() {
+    return locked || paused || runEnded || mode === "home";
+}
+
 async function clickCell(r, c) {
-    if (locked || timeLeft <= 0) return;
+    if (playLocked()) return;
+    if (mode === "challenge" && timeLeft <= 0) return;
 
     const tile = board[r][c];
     if (tile) {
@@ -1037,6 +1423,7 @@ function restartIdleHintTimer() {
         clearTimeout(idleHintTimer);
         idleHintTimer = null;
     }
+    if (paused || runEnded || mode === "home") return;
     idleHintTimer = setTimeout(function () {
         requestHint("idle");
     }, IDLE_HINT_MS);
@@ -1073,16 +1460,19 @@ function applyHintClasses() {
 }
 
 function showHint() {
-    if (hintPair || timeLeft <= 0) return;
+    if (hintPair || runEnded || paused) return;
+    if (mode === "challenge" && timeLeft <= 0) return;
     const pairs = findValidSwaps();
     if (!pairs.length) return;
     hintPair = pairs[Math.floor(Math.random() * pairs.length)];
+    hintTriggered = true;
     applyHintClasses();
     document.getElementById("message").textContent = "提示：试试高亮的两个格子";
 }
 
 function requestHint() {
-    if (hintPair || timeLeft <= 0) return;
+    if (hintPair || runEnded || paused) return;
+    if (mode === "challenge" && timeLeft <= 0) return;
     if (locked) {
         pendingHint = true;
         return;
@@ -1091,7 +1481,7 @@ function requestHint() {
 }
 
 function maybeFlushHint() {
-    if (pendingHint && !hintPair && !locked && timeLeft > 0) {
+    if (pendingHint && !hintPair && !locked && !paused && !runEnded) {
         pendingHint = false;
         showHint();
     }
@@ -1222,7 +1612,7 @@ async function animateGravity(moves, spawns) {
 
 async function clearMatches() {
     resetHintTracking();
-    while (true) {
+    while (!runEnded) {
         const matches = findMatches();
         if (matches.length === 0) break;
 
@@ -1233,29 +1623,36 @@ async function clearMatches() {
         const comboBonus = combo > 1 ? combo * 25 : 0;
         addScore(baseScore + comboBonus);
         addTimeBonus();
+        clearsDone += 1;
+        updateHud();
+        pulseScore();
 
         setLesson(
             "Match · " + classLabel(matchedClass),
             info ? info.match : matchedClass
         );
 
-        if (combo === 1) {
-            document.getElementById("message").textContent =
-                "消除了 " + matches.length + " 个" + (info ? info.zh : matchedClass) + "  +" + TIME_BONUS + "s";
+        if (mode === "challenge") {
+            if (combo === 1) {
+                document.getElementById("message").textContent =
+                    "消除了 " + matches.length + " 个" + (info ? info.zh : matchedClass) + "  +" + TIME_BONUS + "s";
+            } else {
+                document.getElementById("message").textContent =
+                    combo + " 连消！+" + comboBonus + " 分  +" + TIME_BONUS + "s";
+            }
         } else {
             document.getElementById("message").textContent =
-                combo + " 连消！+" + comboBonus + " 分  +" + TIME_BONUS + "s";
+                "成功消除 " + clearsDone + " / " + CLEARS_TO_WIN;
         }
 
         if (combo >= 2) showCombo(combo);
-
         document.getElementById("combo").textContent = String(combo);
 
         matches.forEach(function (pos) {
             const cell = getCell(pos.r, pos.c);
             if (cell) cell.classList.add("popping");
         });
-        showTimeBonus(matches);
+        if (mode === "challenge") showTimeBonus(matches);
         await sleep(280);
 
         matches.forEach(function (pos) {
@@ -1293,11 +1690,18 @@ async function clearMatches() {
         }
 
         await animateGravity(gravity.moves, gravity.spawns);
+
+        if (mode === "campaign" && clearsDone >= CLEARS_TO_WIN) {
+            finishCampaignWin();
+            return;
+        }
     }
 
-    setTimeout(function () {
-        document.getElementById("message").textContent = "点击相邻星系进行交换";
-    }, 400);
+    if (!runEnded) {
+        setTimeout(function () {
+            if (!runEnded) document.getElementById("message").textContent = "点击相邻星系进行交换";
+        }, 400);
+    }
 }
 
 function showCombo(number) {
@@ -1385,58 +1789,153 @@ function createParticles(cell) {
     }
 }
 
-function restartGame() {
-    clearInterval(timer);
+function hideOverlays() {
+    document.getElementById("briefOverlay").classList.remove("show");
+    document.getElementById("winOverlay").classList.remove("show");
+    document.getElementById("challengeOverlay").classList.remove("show");
+}
+
+function stopClocks() {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
     if (idleHintTimer) {
         clearTimeout(idleHintTimer);
         idleHintTimer = null;
     }
-    score = 0;
-    timeLeft = GAME_TIME;
-    combo = 0;
+}
+
+function star2Lost() {
+    return elapsedSec > STAR_TIME_LIMIT;
+}
+
+function currentRunStars() {
+    return [
+        true,
+        !star2Lost(),
+        !hintTriggered
+    ];
+}
+
+function fillBriefModal(kind) {
+    const meta = currentLevelId ? LEVEL_META[currentLevelId] : null;
+    document.getElementById("briefTitle").textContent = kind === "pause" ? "暂停" : (meta ? meta.title : "关卡说明");
+    document.getElementById("briefLead").textContent = meta
+        ? meta.copy + " 成功消除 " + CLEARS_TO_WIN + " 次即可通关。"
+        : "";
+    document.getElementById("briefClears").textContent = clearsDone + " / " + CLEARS_TO_WIN;
+    document.getElementById("briefElapsed").textContent = elapsedSec + "s";
+    const items = [
+        { ok: true, lost: false, label: "通关本关", note: "成功消除 " + CLEARS_TO_WIN + " 次" },
+        {
+            ok: !star2Lost(),
+            lost: star2Lost(),
+            label: STAR_TIME_LIMIT + " 秒内通关",
+            note: star2Lost() ? "已失去" : "进行中"
+        },
+        {
+            ok: !hintTriggered,
+            lost: hintTriggered,
+            label: "不使用提示通关",
+            note: hintTriggered ? "已失去" : "进行中"
+        }
+    ];
+    document.getElementById("briefStars").innerHTML = items.map(function (item) {
+        const cls = item.lost ? "lost" : "";
+        return "<li class=\"" + cls + "\"><span>★ " + item.label + "</span><span class=\"tag\">" + item.note + "</span></li>";
+    }).join("");
+}
+
+function showBrief(kind) {
+    fillBriefModal(kind);
+    document.getElementById("briefOverlay").classList.add("show");
+}
+
+function pauseRun() {
+    if (mode === "home" || runEnded) return;
+    paused = true;
+    stopClocks();
+    selected = null;
+    refreshSelection();
+    if (mode === "campaign") {
+        showBrief("pause");
+        return;
+    }
+    showBrief("pause");
+    document.getElementById("briefTitle").textContent = "暂停";
+    document.getElementById("briefLead").textContent = "倒计时已暂停。继续后仍从剩余时间开始。";
+    document.getElementById("briefClears").textContent = "得分 " + score;
+    document.getElementById("briefElapsed").textContent = timeLeft + "s 剩余";
+    document.getElementById("briefStars").innerHTML =
+        "<li><span>计时到 0 结束</span><span class=\"tag\">每次消除 +" + TIME_BONUS + "s</span></li>";
+}
+
+function resumeFromBrief() {
+    if (runEnded) return;
+    document.getElementById("briefOverlay").classList.remove("show");
+    paused = false;
+    startPlayClock();
+    restartIdleHintTimer();
+}
+
+function startPlayClock() {
+    stopClocks();
+    timer = setInterval(function () {
+        if (paused || runEnded) return;
+        if (mode === "challenge") {
+            timeLeft -= 1;
+            elapsedSec += 1;
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                updateHud();
+                endChallenge();
+                return;
+            }
+        } else {
+            elapsedSec += 1;
+        }
+        updateHud();
+    }, 1000);
+}
+
+function catalogFor(folder) {
+    const data = GALAXY_DATA && GALAXY_DATA[folder];
+    return Array.isArray(data) ? data : [];
+}
+
+function prepareBoard() {
     selected = null;
     locked = false;
     imageErrors = 0;
+    combo = 0;
     failSwaps = 0;
     hintPair = null;
     pendingHint = false;
     clearHintClasses();
     document.getElementById("score").classList.remove("score-pop");
-    document.getElementById("gameOver").classList.remove("show");
     document.getElementById("message").textContent = "点击相邻星系进行交换";
-    setLesson(
-        "How to play · 玩法",
-        "交换相邻格子。只要形态类相同，即使照片不同也可以连成三个消除。成功消除会获得 +3s。"
-    );
 
-    if (!Array.isArray(GALAXY_DATA) || GALAXY_DATA.length === 0) {
+    if (!activeCatalog.length) {
         showStatus(
             "error",
             "No galaxy images found",
-            "目录为空。请确认 GalaxyImages4Class/ 后运行 python3 tools/build_index.py。"
+            "目录为空。请确认 GalaxyImagesByLevel/ 后运行 python3 tools/build_index.py。"
         );
-        return;
+        return false;
     }
 
-    const size = sizeBoardFromUniqueCount(GALAXY_DATA.length);
+    const size = sizeBoardFromUniqueCount(activeCatalog.length);
     ROWS = size.rows;
     COLS = size.cols;
-    if (!ROWS || !COLS) {
-        showStatus(
-            "error",
-            "Not enough unique images",
-            "至少需要 9 张不重复图像才能组成可玩棋盘。"
-        );
-        return;
-    }
 
-    const classCount = new Set(GALAXY_DATA.map(function (item) { return item.classId; })).size;
+    const classCount = new Set(activeCatalog.map(function (item) { return item.classId; })).size;
     document.getElementById("subtitle").textContent =
-        classCount + " classes · " + GALAXY_DATA.length + " unique images · " + COLS + "×" + ROWS + " board";
+        classCount + " classes · " + activeCatalog.length + " unique images · " + COLS + "×" + ROWS + " board";
 
     let ready = false;
-    for (let i = 0; i < 40; i++) {
-        if (initBoard() && uniqueImageCountOnBoard()) {
+    for (let i = 0; i < 80; i++) {
+        if (initBoard() && uniqueImageCountOnBoard() && findValidSwaps().length) {
             ready = true;
             break;
         }
@@ -1445,37 +1944,159 @@ function restartGame() {
         showStatus(
             "error",
             "Could not build a fair board",
-            "无法在无开局三连且图像不重复的条件下生成棋盘。"
+            "无法在无开局三连的条件下生成棋盘。"
         );
-        return;
+        return false;
     }
 
     showPlayArea();
     renderLegend();
     mountBoard();
     updateHud();
-    startTimer();
+    return true;
+}
+
+function showGameShell() {
+    document.getElementById("homeScreen").classList.add("hidden");
+    document.getElementById("gameShell").classList.remove("hidden");
+}
+
+function goHome() {
+    runEnded = true;
+    paused = false;
+    mode = "home";
+    currentLevelId = null;
+    stopClocks();
+    hideOverlays();
+    document.getElementById("gameShell").classList.add("hidden");
+    document.getElementById("homeScreen").classList.remove("hidden");
+    renderHome();
+}
+
+function startCampaign(levelId) {
+    const meta = LEVEL_META[levelId];
+    if (!meta || !levelUnlocked(levelId)) return;
+    hideOverlays();
+    mode = "campaign";
+    currentLevelId = levelId;
+    activeCatalog = catalogFor(meta.folder);
+    runEnded = false;
+    paused = true;
+    score = 0;
+    clearsDone = 0;
+    elapsedSec = 0;
+    timeLeft = 0;
+    hintTriggered = false;
+    document.getElementById("playTitle").textContent = meta.title;
+    document.getElementById("pauseBtn").classList.remove("hidden");
+    setLesson("How to play · 玩法", meta.copy + " 同一形态类连成三个即可消除。成功消除 " + CLEARS_TO_WIN + " 次通关。");
+    showGameShell();
+    if (!prepareBoard()) return;
+    showBrief("enter");
+}
+
+function startChallenge() {
+    if (!challengeUnlocked()) return;
+    hideOverlays();
+    mode = "challenge";
+    currentLevelId = null;
+    activeCatalog = catalogFor(CHALLENGE_FOLDER);
+    runEnded = false;
+    paused = false;
+    score = 0;
+    clearsDone = 0;
+    elapsedSec = 0;
+    timeLeft = GAME_TIME;
+    hintTriggered = false;
+    document.getElementById("playTitle").textContent = "挑战模式";
+    document.getElementById("pauseBtn").classList.remove("hidden");
+    setLesson(
+        "Challenge · 挑战",
+        "最大图库。交换相邻格子，同类三消得分，并获得 +" + TIME_BONUS + "s。计时到 0 结束。"
+    );
+    showGameShell();
+    if (!prepareBoard()) return;
+    startPlayClock();
     resetHintTracking();
 }
 
-function startTimer() {
-    timer = setInterval(function () {
-        timeLeft -= 1;
-        document.getElementById("time").textContent = String(timeLeft);
-        if (timeLeft <= 0) {
-            timeLeft = 0;
-            document.getElementById("time").textContent = "0";
-            clearInterval(timer);
-            locked = true;
-            if (idleHintTimer) {
-                clearTimeout(idleHintTimer);
-                idleHintTimer = null;
-            }
-            dismissHint();
-            document.getElementById("finalScore").textContent = String(score);
-            document.getElementById("gameOver").classList.add("show");
-        }
-    }, 1000);
+function restartCurrentRun() {
+    if (mode === "campaign" && currentLevelId) {
+        startCampaign(currentLevelId);
+        return;
+    }
+    if (mode === "challenge") {
+        startChallenge();
+    }
+}
+
+function finishCampaignWin() {
+    if (runEnded) return;
+    runEnded = true;
+    paused = true;
+    stopClocks();
+    dismissHint();
+    const earned = currentRunStars();
+    const prev = progress.stars[currentLevelId];
+    progress.stars[currentLevelId] = prev.map(function (was, i) { return was || earned[i]; });
+    const best = progress.bestTime[currentLevelId];
+    if (best == null || elapsedSec < best) progress.bestTime[currentLevelId] = elapsedSec;
+    if (totalStars() >= 9) progress.challengeUnlocked = true;
+    saveProgress();
+    document.getElementById("winLead").textContent =
+        LEVEL_META[currentLevelId].title + " 用时 " + elapsedSec + "s。星级会保留历史最好成绩。";
+    document.getElementById("winStars").innerHTML = starMarkup(earned);
+    document.getElementById("winOverlay").classList.add("show");
+}
+
+function endChallenge() {
+    if (runEnded) return;
+    runEnded = true;
+    paused = true;
+    stopClocks();
+    dismissHint();
+    locked = true;
+    document.getElementById("finalScore").textContent = String(score);
+    document.getElementById("finalDuration").textContent = elapsedSec + "s";
+    document.getElementById("challengeOverlay").classList.add("show");
+}
+
+function saveChallengePng() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 720;
+    canvas.height = 420;
+    const ctx = canvas.getContext("2d");
+    const bg = ctx.createLinearGradient(0, 0, 720, 420);
+    bg.addColorStop(0, "#070b16");
+    bg.addColorStop(1, "#1e3a8a");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 720, 420);
+    ctx.fillStyle = "#7dd3fc";
+    ctx.font = "700 18px sans-serif";
+    ctx.fillText("星系分类消消乐", 48, 70);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 36px sans-serif";
+    ctx.fillText("挑战模式成绩", 48, 120);
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "800 64px sans-serif";
+    ctx.fillText("得分 " + score, 48, 220);
+    ctx.fillStyle = "#e8eefc";
+    ctx.font = "700 28px sans-serif";
+    ctx.fillText("本局时长 " + elapsedSec + " 秒", 48, 280);
+    ctx.fillStyle = "#9aa8c7";
+    ctx.font = "600 16px sans-serif";
+    ctx.fillText("Galaxy morphology match-3  ·  " + new Date().toISOString().slice(0, 10), 48, 360);
+    canvas.toBlob(function (blob) {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "galaxy-challenge-" + score + ".png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }, "image/png");
 }
 
 function sleep(ms) {
@@ -1484,7 +2105,8 @@ function sleep(ms) {
     });
 }
 
-restartGame();
+progress = loadProgress();
+renderHome();
 </script>
 </body>
 </html>

@@ -1,41 +1,45 @@
 # Galaxy classification match-3 demo
 
-Educational match-3 from `GalaxyImages4Class/` (face-on spiral, edge-on disk, irregular, smooth). Matching is by **class** (subfolder), not identical pixels. After a clear, survivors fall and new images enter from the top.
+Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder), not identical pixels. Home selects Easy / Normal / Hard; Challenge uses the `Challange` folder after 9 stars.
 
-这是一个用四类星系形态目录做成的科普消消乐：按类别匹配，不按同一张图匹配。
-
-## Suggested GitHub repo
-
-Suggested name: **`GalaxyGameDemo`**. Visibility: **public**. Colleagues can fork this folder for secondary development (`二次开发`).
-
-建议仓库名 `GalaxyGameDemo`，公开仓库，便于同事二次开发。
+这是一个按星系形态分类的科普消消乐。主页选简单 / 普通 / 困难；集齐 9 星后开放挑战模式。
 
 ## Play
 
 打开方式 / how to play:
 
-1. Open `index.html` in a browser (double-click, or drag into Chrome/Safari).
-2. Optional local server:
-   `python3 -m http.server 43147 --bind 127.0.0.1`
-3. Swap adjacent tiles. Three or more galaxies of the **same morphological class** clear even when the photos differ.
+1. Open `index.html` in a browser (double-click, or a local server).
+2. Optional:
+   `python3 -m http.server 43191 --bind 127.0.0.1`
+3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level, finish within **90s**, trigger **no hints**.
+4. Challenge: score plus a 60s countdown (**+3s** per clear). When a run ends, save a result PNG.
 
 `index.html` is a single portable file (inline CSS/JS, JPEG data URIs). Image bytes are not gzipped.
 
 `index.html` 可单独打开；图像以 JPEG 的 data URI 嵌入，未做 gzip。
 
-## Rebuild
+Progress lives in `localStorage` (`galaxyGameDemo.progress.v1`). The home console can reset all progress or unlock Challenge immediately.
 
-改图或改玩法后，用当前四类目录重建：
+进度保存在本机；主页控制台可重置或立刻解锁挑战。
+
+## Board sizes
+
+- Easy / Normal: **6×4**
+- Hard / Challenge: **8×4**
+
+## Rebuild
 
 ```bash
 python3 tools/build_index.py
+node tools/verify_rules.cjs
 ```
 
-This reads `GalaxyImages4Class/` (default 12 unique JPEGs per class) and writes a new portable `index.html`. Template: `tools/game.template.html`. Checks: `node tools/verify_rules.cjs`.
+This embeds every JPEG under `GalaxyImagesByLevel/{Easy,Normal,Hard,Challange}`. Template: `tools/game.template.html`.
 
 ## Dataset
 
-- **Included:** `GalaxyImages4Class/` — FaceOnSpirals, EdgeOnDisk, Irregular, Smooth (the set the game actually uses).
-- **Not included:** the original `GalaxyImages/` catalog (~6000 images). Keep that folder local only; `.gitignore` excludes it.
+- **Included:** `GalaxyImagesByLevel/` — five classes (FaceOnSpirals, EdgeOnDisk, Irregular, Elliptical, Group / 星系团). Challenge folder spelling is `Challange`.
+- **Not used by the current build:** `GalaxyImages4Class/`
+- **Not included in spirit of the portable demo:** original `GalaxyImages/` (~6000 images), gitignored.
 
-包含四类小目录；原始约 6000 张的 `GalaxyImages/` 不在本仓库中。
+包含分关小目录；原始约 6000 张的 `GalaxyImages/` 不进入便携页面来源。

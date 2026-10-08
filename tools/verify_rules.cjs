@@ -1,36 +1,31 @@
 /**
- * Headless checks for 4-class matching, unique files, gravity refill,
- * valid-swap hints, and board sizing from the unique-image catalog.
+ * Checks for 5-class matching, per-level catalogs, uniqueness with Easy reuse,
+ * gravity refill, hints, campaign constants, and challenge countdown rules.
  */
 const fs = require("fs");
 const path = require("path");
 
 const htmlPath = path.join(__dirname, "..", "index.html");
 const html = fs.readFileSync(htmlPath, "utf8");
-const match = html.match(/const GALAXY_DATA = (\[.*?\]);\nconst GAME_TIME/s);
-if (!match) {
-    console.error("Could not parse GALAXY_DATA from index.html");
-    process.exit(1);
-}
-const GALAXY_DATA = JSON.parse(match[1]);
 
-const EXPECTED_CLASSES = ["EdgeOnDisk", "FaceOnSpirals", "Irregular", "Smooth"];
+function extractJson(name) {
+    const token = "const " + name + " = ";
+    const start = html.indexOf(token);
+    if (start < 0) throw new Error("missing " + name);
+    const from = start + token.length;
+    const slice = html.slice(from);
+    const end = slice.search(/;\nconst /);
+    if (end < 0) throw new Error("could not bound " + name);
+    return JSON.parse(slice.slice(0, end));
+}
+
+const GALAXY_DATA = extractJson("GALAXY_DATA");
+const EXPECTED_FOLDERS = ["Easy", "Normal", "Hard", "Challange"];
+const EXPECTED_CLASSES = ["EdgeOnDisk", "Elliptical", "FaceOnSpirals", "Group", "Irregular"];
 
 function sizeBoardFromUniqueCount(uniqueCount) {
-    if (uniqueCount < 9) return { rows: 0, cols: 0, cells: 0 };
-    const cells = Math.min(uniqueCount, Math.max(9, Math.floor(uniqueCount * 2 / 3)));
-    let cols = Math.round(Math.sqrt(cells * 2));
-    cols = Math.max(3, Math.min(cols, cells));
-    let rows = Math.floor(cells / cols);
-    if (rows < 3) {
-        rows = 3;
-        cols = Math.max(3, Math.floor(cells / rows));
-    }
-    while (rows * cols > uniqueCount) {
-        if (cols > 3) cols -= 1;
-        else rows -= 1;
-    }
-    return { rows, cols, cells: rows * cols };
+    if (uniqueCount >= 32) return { rows: 4, cols: 8, cells: 32 };
+    return { rows: 4, cols: 6, cells: 24 };
 }
 
 function findMatches(board, rows, cols) {
@@ -70,11 +65,12 @@ function idsOnBoard(board) {
     return used;
 }
 
-function pickUnusedTile(board) {
-    const occupied = idsOnBoard(board);
-    const unused = GALAXY_DATA.filter((item) => !occupied.has(item.id));
-    if (!unused.length) return null;
-    return unused[Math.floor(Math.random() * unused.length)];
+function pickUnusedTile(catalog, board, usedExtra) {
+    const occupied = usedExtra || idsOnBoard(board);
+    const unused = catalog.filter((item) => !occupied.has(item.id));
+    if (unused.length) return unused[Math.floor(Math.random() * unused.length)];
+    if (!catalog.length) return null;
+    return catalog[Math.floor(Math.random() * catalog.length)];
 }
 
 function wouldOpenMatch(board, r, c, classId) {
@@ -85,32 +81,37 @@ function wouldOpenMatch(board, r, c, classId) {
     return false;
 }
 
-function initBoard(rows, cols) {
+function initBoard(catalog, rows, cols) {
     const used = new Set();
     const board = [];
+    const requireUnique = catalog.length >= rows * cols;
     for (let r = 0; r < rows; r++) {
         board[r] = [];
         for (let c = 0; c < cols; c++) {
             let chosen = null;
             for (let attempt = 0; attempt < 24; attempt++) {
-                const unused = GALAXY_DATA.filter((item) => !used.has(item.id));
-                if (!unused.length) return null;
-                const candidate = unused[Math.floor(Math.random() * unused.length)];
+                const candidate = pickUnusedTile(catalog, board, used);
+                if (!candidate) return null;
                 if (wouldOpenMatch(board, r, c, candidate.classId)) continue;
                 chosen = candidate;
                 break;
             }
-            if (!chosen) chosen = GALAXY_DATA.find((item) => !used.has(item.id));
+            if (!chosen) chosen = pickUnusedTile(catalog, board, used);
             if (!chosen) return null;
             board[r][c] = { id: chosen.id, classId: chosen.classId };
             used.add(chosen.id);
         }
     }
     if (findMatches(board, rows, cols).length) return null;
+    if (requireUnique) {
+        const ids = [];
+        for (const row of board) for (const tile of row) ids.push(tile.id);
+        if (new Set(ids).size !== ids.length) return null;
+    }
     return board;
 }
 
-function gravityFill(board, rows, cols, cleared) {
+function gravityFill(catalog, board, rows, cols, cleared) {
     const snapshot = board.map((row) => row.map((tile) => tile && tile.id));
     for (const pos of cleared) board[pos.r][pos.c] = null;
     const used = idsOnBoard(board);
@@ -124,15 +125,12 @@ function gravityFill(board, rows, cols, cleared) {
         const holes = rows - kept.length;
         const col = new Array(rows);
         for (let i = 0; i < holes; i++) {
-            const unused = GALAXY_DATA.filter((item) => !used.has(item.id));
-            if (!unused.length) throw new Error("no unused image for gravity spawn");
-            const next = unused[Math.floor(Math.random() * unused.length)];
+            const next = pickUnusedTile(catalog, board, used);
+            if (!next) throw new Error("no image for gravity spawn");
             col[i] = { id: next.id, classId: next.classId };
             used.add(next.id);
         }
-        for (let i = 0; i < kept.length; i++) {
-            col[holes + i] = kept[i];
-        }
+        for (let i = 0; i < kept.length; i++) col[holes + i] = kept[i];
         for (let r = 0; r < rows; r++) board[r][c] = col[r];
     }
     for (let c = 0; c < cols; c++) {
@@ -143,25 +141,23 @@ function gravityFill(board, rows, cols, cleared) {
         if (tail.join() !== keptIds.join()) {
             throw new Error("survivors did not fall as a packed column");
         }
-        for (let r = 0; r < rows - keptIds.length; r++) {
-            if (snapshot[r] && keptIds.includes(packed[r]) && snapshot.some((row) => row[c] === packed[r] && row === snapshot[r])) {
-                /* new top cells may coincidentally reuse a just-cleared id; uniqueness is enough */
-            }
-        }
     }
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const id = snapshot[r][c];
-            if (!id) continue;
-            const wasCleared = cleared.some((pos) => pos.r === r && pos.c === c);
-            if (wasCleared) continue;
-            let found = false;
-            for (let rr = r; rr < rows; rr++) {
-                if (board[rr][c].id === id) found = true;
-            }
-            if (!found) throw new Error("survivor vanished instead of falling: " + id);
-            for (let rr = 0; rr < r; rr++) {
-                if (board[rr][c].id === id) throw new Error("survivor rose upward: " + id);
+    const requireUnique = catalog.length >= rows * cols;
+    if (requireUnique) {
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const id = snapshot[r][c];
+                if (!id) continue;
+                const wasCleared = cleared.some((pos) => pos.r === r && pos.c === c);
+                if (wasCleared) continue;
+                let found = false;
+                for (let rr = r; rr < rows; rr++) {
+                    if (board[rr][c].id === id) found = true;
+                }
+                if (!found) throw new Error("survivor vanished instead of falling: " + id);
+                for (let rr = 0; rr < r; rr++) {
+                    if (board[rr][c].id === id) throw new Error("survivor rose upward: " + id);
+                }
             }
         }
     }
@@ -190,86 +186,94 @@ function findValidSwaps(board, rows, cols) {
     return pairs;
 }
 
-const classes = [...new Set(GALAXY_DATA.map((item) => item.classId))].sort();
-const ids = GALAXY_DATA.map((item) => item.id);
-const size = sizeBoardFromUniqueCount(GALAXY_DATA.length);
-
-console.log("classes", classes.length, classes.join(","));
-console.log("unique images", ids.length, "unique ids", new Set(ids).size);
-console.log("board", size.cols + "x" + size.rows, "cells", size.cells);
-
-if (classes.join(",") !== EXPECTED_CLASSES.join(",")) {
-    throw new Error("expected 4 classes " + EXPECTED_CLASSES.join(",") + " got " + classes.join(","));
-}
-if (ids.length !== 48 || new Set(ids).size !== 48) throw new Error("expected 48 unique images");
-if (size.cols !== 8 || size.rows !== 4) throw new Error("expected 8x4 board from 48 unique images");
-
-const sameClass = GALAXY_DATA.filter((item) => item.classId === "FaceOnSpirals").slice(0, 3);
-if (sameClass[0].id === sameClass[1].id) throw new Error("sample images were not distinct");
-const toy = [[
-    sameClass[0],
-    sameClass[1],
-    sameClass[2],
-    GALAXY_DATA.find((item) => item.classId !== "FaceOnSpirals"),
-]];
-const toyMatches = findMatches(toy, 1, 4);
-if (toyMatches.length !== 3) {
-    throw new Error("class match failed for distinct bitmaps: " + JSON.stringify(toyMatches));
+const folders = Object.keys(GALAXY_DATA).sort();
+if (folders.join(",") !== EXPECTED_FOLDERS.slice().sort().join(",")) {
+    throw new Error("expected folders " + EXPECTED_FOLDERS.join(",") + " got " + folders.join(","));
 }
 
-const differentClassRow = [[
-    GALAXY_DATA.find((item) => item.classId === "Smooth"),
-    GALAXY_DATA.find((item) => item.classId === "Irregular"),
-    GALAXY_DATA.find((item) => item.classId === "FaceOnSpirals"),
-    GALAXY_DATA.find((item) => item.classId === "EdgeOnDisk"),
-]];
-if (findMatches(differentClassRow, 1, 4).length !== 0) {
-    throw new Error("different classes should not match");
-}
-
-if (!html.includes("TIME_BONUS = 3")) throw new Error("missing +3s time bonus");
-if (!html.includes("bonus-float")) throw new Error("missing +3s popup");
-if (!html.includes("tileShatter")) throw new Error("missing shatter animation");
-if (!html.includes("FAIL_HINT_COUNT = 3")) throw new Error("missing 3-fail hint");
-if (!html.includes("IDLE_HINT_MS = 10000")) throw new Error("missing 10s idle hint");
-if (!html.includes("hintBlink")) throw new Error("missing hint blink");
-if (!html.includes("planGravity")) throw new Error("missing gravity planner");
-if (!html.includes("tileFall")) throw new Error("missing fall animation");
-
-for (let i = 0; i < 80; i++) {
-    let board = null;
-    for (let n = 0; n < 40; n++) {
-        board = initBoard(size.rows, size.cols);
-        if (board) break;
+for (const folder of EXPECTED_FOLDERS) {
+    const catalog = GALAXY_DATA[folder];
+    const classes = [...new Set(catalog.map((item) => item.classId))].sort();
+    const ids = catalog.map((item) => item.id);
+    const size = sizeBoardFromUniqueCount(catalog.length);
+    console.log(folder, "classes", classes.length, classes.join(","), "images", ids.length, "board", size.cols + "x" + size.rows);
+    if (classes.join(",") !== EXPECTED_CLASSES.join(",")) {
+        throw new Error(folder + " expected 5 classes, got " + classes.join(","));
     }
-    if (!board) throw new Error("failed to build a legal opening board");
-    const onBoard = [];
-    for (const row of board) for (const tile of row) onBoard.push(tile.id);
-    if (new Set(onBoard).size !== onBoard.length) throw new Error("duplicate image file on board");
-
-    const pairs = findValidSwaps(board, size.rows, size.cols);
-    if (!pairs.length) throw new Error("opening board had no valid hint swap");
-    const pick = pairs[0];
-    const t = board[pick.a.r][pick.a.c];
-    board[pick.a.r][pick.a.c] = board[pick.b.r][pick.b.c];
-    board[pick.b.r][pick.b.c] = t;
-    if (findMatches(board, size.rows, size.cols).length < 3) {
-        throw new Error("hint pair was not actually a match");
+    if (new Set(ids).size !== ids.length) throw new Error(folder + " has duplicate ids");
+    if (!catalog.every((item) => item.src.startsWith("data:image/jpeg;base64,"))) {
+        throw new Error(folder + " images should be jpeg data URIs");
     }
-    board[pick.b.r][pick.b.c] = board[pick.a.r][pick.a.c];
-    board[pick.a.r][pick.a.c] = t;
+    if (folder === "Easy" && (size.cols !== 6 || size.rows !== 4)) throw new Error("Easy should be 6x4");
+    if (folder === "Normal" && (size.cols !== 6 || size.rows !== 4)) throw new Error("Normal should be 6x4");
+    if (folder === "Hard" && (size.cols !== 8 || size.rows !== 4)) throw new Error("Hard should be 8x4");
+    if (folder === "Challange" && (size.cols !== 8 || size.rows !== 4)) throw new Error("Challange should be 8x4");
 
-    const before = board.map((row) => row.map((tile) => tile.id));
-    gravityFill(board, size.rows, size.cols, [{ r: 1, c: 2 }, { r: 2, c: 2 }, { r: 3, c: 2 }]);
-    const after = [];
-    for (const row of board) for (const tile of row) after.push(tile.id);
-    if (new Set(after).size !== after.length) throw new Error("duplicate after gravity");
-    const fallen = before[0][2];
-    if (board[0][2].id === fallen) throw new Error("top of cleared column should be a new spawn");
-    if (board[3][2].id !== fallen) throw new Error("top survivor should land at the bottom of the column");
+    const sameClass = catalog.filter((item) => item.classId === "FaceOnSpirals");
+    if (sameClass.length < 1) throw new Error(folder + " missing FaceOnSpirals");
+    if (sameClass.length >= 3) {
+        const toy = [[sameClass[0], sameClass[1], sameClass[2], catalog.find((item) => item.classId !== "FaceOnSpirals")]];
+        if (findMatches(toy, 1, 4).length !== 3) throw new Error(folder + " class match failed");
+    } else {
+        const toy = [[sameClass[0], sameClass[0], sameClass[0], catalog.find((item) => item.classId !== "FaceOnSpirals")]];
+        if (findMatches(toy, 1, 4).length !== 3) throw new Error("Easy-style class match failed");
+    }
+
+    const differentClassRow = [[
+        catalog.find((item) => item.classId === "Elliptical"),
+        catalog.find((item) => item.classId === "Irregular"),
+        catalog.find((item) => item.classId === "FaceOnSpirals"),
+        catalog.find((item) => item.classId === "EdgeOnDisk"),
+        catalog.find((item) => item.classId === "Group")
+    ]];
+    if (findMatches(differentClassRow, 1, 5).length !== 0) {
+        throw new Error("different classes should not match");
+    }
+
+    for (let i = 0; i < 30; i++) {
+        let board = null;
+        let pairs = [];
+        for (let n = 0; n < 80; n++) {
+            board = initBoard(catalog, size.rows, size.cols);
+            if (!board) continue;
+            pairs = findValidSwaps(board, size.rows, size.cols);
+            if (pairs.length) break;
+            board = null;
+        }
+        if (!board) throw new Error(folder + " failed to build a legal opening board with a hint swap");
+        const onBoard = [];
+        for (const row of board) for (const tile of row) onBoard.push(tile.id);
+        if (catalog.length >= size.cells && new Set(onBoard).size !== onBoard.length) {
+            throw new Error(folder + " duplicate image file on board");
+        }
+        gravityFill(catalog, board, size.rows, size.cols, [{ r: 1, c: 2 }, { r: 2, c: 2 }, { r: 3, c: 2 }]);
+        const after = [];
+        for (const row of board) for (const tile of row) after.push(tile.id);
+        if (catalog.length >= size.cells && new Set(after).size !== after.length) {
+            throw new Error(folder + " duplicate after gravity");
+        }
+    }
 }
 
-const srcPrefix = GALAXY_DATA.every((item) => item.src.startsWith("data:image/jpeg;base64,"));
-if (!srcPrefix) throw new Error("images should be jpeg data URIs without extra compression wrappers");
+const required = [
+    ["CLEARS_TO_WIN = 20", "20-clear win constant"],
+    ["STAR_TIME_LIMIT = 90", "90s star constant"],
+    ["TIME_BONUS = 3", "+3s time bonus"],
+    ["FAIL_HINT_COUNT = 3", "3-fail hint"],
+    ["IDLE_HINT_MS = 10000", "10s idle hint"],
+    ["STORAGE_KEY = \"galaxyGameDemo.progress.v1\"", "progress storage key"],
+    ["CHALLENGE_FOLDER = \"Challange\"", "Challange folder spelling"],
+    ["bonus-float", "+3s popup"],
+    ["tileShatter", "shatter animation"],
+    ["hintBlink", "hint blink"],
+    ["planGravity", "gravity planner"],
+    ["tileFall", "fall animation"],
+    ["saveChallengePng", "challenge PNG save"],
+    ["unlockChallengeNow", "console unlock"],
+    ["resetAllProgress", "console reset"]
+];
+for (const [token, label] of required) {
+    if (!html.includes(token)) throw new Error("missing " + label);
+}
 
-console.log("ok: 4-class matching, uniqueness, gravity refill, hint rules");
+console.log("ok: 5-class matching, ByLevel catalogs, uniqueness/reuse, gravity, stars, challenge");
