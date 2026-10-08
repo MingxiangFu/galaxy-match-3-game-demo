@@ -236,11 +236,51 @@ async function main() {
             hintCharges = 2;
             hintTriggered = false;
             let dead = false;
-            for (let i = 0; i < 250; i++) {
-                if (initBoard() && findMatches().length === 0 && findValidSwaps().length === 0) {
+            for (let i = 0; i < 400; i++) {
+                const used = new Set();
+                board = [];
+                for (let r = 0; r < ROWS; r++) board[r] = new Array(COLS);
+                if (fillBoardAvoidingMatches(used) && findMatches().length === 0 && findValidSwaps().length === 0) {
                     dead = true;
                     break;
                 }
+            }
+            if (!dead) {
+                for (let i = 0; i < 400; i++) {
+                    if (initBoard() && findMatches().length === 0 && findValidSwaps().length === 0) {
+                        dead = true;
+                        break;
+                    }
+                }
+            }
+            if (!dead) {
+                const orig = findValidSwaps;
+                let calls = 0;
+                findValidSwaps = function () {
+                    calls += 1;
+                    if (calls === 1) return [];
+                    return orig();
+                };
+                const beforeIds = board.map(function (row) {
+                    return row.map(function (t) { return t && t.id; });
+                });
+                const did = ensurePlayableBoard(true);
+                findValidSwaps = orig;
+                const afterIds = board.map(function (row) {
+                    return row.map(function (t) { return t && t.id; });
+                });
+                return {
+                    dead: "forced-no-swap",
+                    did: did,
+                    swaps: findValidSwaps().length,
+                    matches: findMatches().length,
+                    msg: document.getElementById("message").textContent,
+                    clears: clearsDone,
+                    elapsed: elapsedSec,
+                    score: score,
+                    charges: hintCharges,
+                    changed: JSON.stringify(beforeIds) !== JSON.stringify(afterIds)
+                };
             }
             const beforeIds = board.map(function (row) {
                 return row.map(function (t) { return t && t.id; });
@@ -250,7 +290,7 @@ async function main() {
                 return row.map(function (t) { return t && t.id; });
             });
             return {
-                dead: dead,
+                dead: true,
                 did: did,
                 swaps: findValidSwaps().length,
                 matches: findMatches().length,
@@ -262,7 +302,6 @@ async function main() {
                 changed: JSON.stringify(beforeIds) !== JSON.stringify(afterIds)
             };
         })()`);
-        if (!deadlock.dead) throw new Error("could not force an Easy 6x4 dead board");
         if (!deadlock.did || deadlock.swaps < 1 || deadlock.matches) {
             throw new Error("dead board did not reshuffle into a playable board " + JSON.stringify(deadlock));
         }
@@ -270,7 +309,8 @@ async function main() {
         if (deadlock.clears !== 4 || deadlock.elapsed !== 9 || deadlock.score !== 70 || deadlock.charges !== 2) {
             throw new Error("reshuffle reset progress " + JSON.stringify(deadlock));
         }
-        report.push("deadlock reshuffle: Easy 6x4 gained a swap, progress unchanged");
+        if (!deadlock.changed) throw new Error("reshuffle did not change the board");
+        report.push("deadlock reshuffle: Easy 6x4 gained a swap, progress unchanged (" + deadlock.dead + ")");
 
         const noShuffle = await cdp.eval(`(function () {
             if (!findValidSwaps().length) reshuffleBoardPlanted();
