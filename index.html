@@ -406,6 +406,15 @@ body.playing {
     animation: hintBlink 1.5s ease-in-out infinite;
 }
 
+.board.just-reshuffled .cell {
+    animation: boardReshuffle 0.55s ease;
+}
+
+@keyframes boardReshuffle {
+    0% { filter: brightness(1.45); }
+    100% { filter: brightness(1); }
+}
+
 @keyframes hintBlink {
     0%, 100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); }
     50% { box-shadow: 0 0 0 3px #fff, 0 0 18px rgba(255, 255, 255, 0.95); }
@@ -1068,30 +1077,46 @@ function idsOnBoard() {
     return used;
 }
 
-function pickUnusedTile(avoidClassId, usedIds) {
-    /* Prefer a class/filename not already on the board. Reuse only when the unused pool is empty (Easy). */
+function avoidedClassSet(avoidClassIds) {
+    const avoided = {};
+    if (typeof avoidClassIds === "string" && avoidClassIds) {
+        avoided[avoidClassIds] = true;
+    } else if (Object.prototype.toString.call(avoidClassIds) === "[object Array]") {
+        avoidClassIds.forEach(function (id) {
+            if (id) avoided[id] = true;
+        });
+    }
+    return avoided;
+}
+
+function pickUnusedTile(avoidClassIds, usedIds) {
+    /* Prefer a class/filename not on the board, but never dump a forbidden
+       (just-cleared) class into every hole just because those files are unused. */
     const occupied = usedIds || idsOnBoard();
-    let unused = activeCatalog.filter(function (item) {
+    const avoided = avoidedClassSet(avoidClassIds);
+    function allowed(item) {
+        return !avoided[item.classId];
+    }
+    const unused = activeCatalog.filter(function (item) {
         return !occupied.has(item.id);
     });
-    if (avoidClassId) {
-        const filtered = unused.filter(function (item) {
-            return item.classId !== avoidClassId;
+    const unusedOk = unused.filter(allowed);
+    if (unusedOk.length) {
+        return unusedOk[Math.floor(Math.random() * unusedOk.length)];
+    }
+    const reuseOk = activeCatalog.filter(allowed);
+    if (reuseOk.length && !uniquenessRequired()) {
+        return reuseOk[Math.floor(Math.random() * reuseOk.length)];
+    }
+    if (reuseOk.length && uniquenessRequired()) {
+        const uniqueOk = reuseOk.filter(function (item) {
+            return !occupied.has(item.id);
         });
-        if (filtered.length) unused = filtered;
+        if (uniqueOk.length) return uniqueOk[Math.floor(Math.random() * uniqueOk.length)];
     }
-    if (unused.length) {
-        return unused[Math.floor(Math.random() * unused.length)];
-    }
-    let pool = activeCatalog;
-    if (avoidClassId) {
-        const filtered = pool.filter(function (item) {
-            return item.classId !== avoidClassId;
-        });
-        if (filtered.length) pool = filtered;
-    }
-    if (!pool.length) return null;
-    return pool[Math.floor(Math.random() * pool.length)];
+    const leftover = unused.length ? unused : activeCatalog;
+    if (!leftover.length) return null;
+    return leftover[Math.floor(Math.random() * leftover.length)];
 }
 
 function wouldOpenMatch(r, c, classId) {
@@ -1549,6 +1574,141 @@ function findValidSwaps() {
     return pairs;
 }
 
+function lineWouldMatch(r, c, classId) {
+    let horiz = 1;
+    for (let cc = c - 1; cc >= 0; cc--) {
+        if (!board[r][cc] || board[r][cc].classId !== classId) break;
+        horiz += 1;
+    }
+    for (let cc = c + 1; cc < COLS; cc++) {
+        if (!board[r][cc] || board[r][cc].classId !== classId) break;
+        horiz += 1;
+    }
+    let vert = 1;
+    for (let rr = r - 1; rr >= 0; rr--) {
+        if (!board[rr][c] || board[rr][c].classId !== classId) break;
+        vert += 1;
+    }
+    for (let rr = r + 1; rr < ROWS; rr++) {
+        if (!board[rr][c] || board[rr][c].classId !== classId) break;
+        vert += 1;
+    }
+    return horiz >= 3 || vert >= 3;
+}
+
+function tilesFromClass(classId, count, used) {
+    const pool = activeCatalog.filter(function (item) { return item.classId === classId; });
+    if (!pool.length) return null;
+    const out = [];
+    for (let i = 0; i < count; i++) {
+        let item = null;
+        if (uniquenessRequired()) {
+            const unused = pool.filter(function (entry) { return !used.has(entry.id); });
+            if (!unused.length) return null;
+            item = unused[Math.floor(Math.random() * unused.length)];
+            used.add(item.id);
+        } else {
+            item = pool[Math.floor(Math.random() * pool.length)];
+        }
+        out.push(cloneTile(item));
+    }
+    return out;
+}
+
+function fillBoardAvoidingMatches(used) {
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c]) continue;
+            let chosen = null;
+            for (let attempt = 0; attempt < 48; attempt++) {
+                const candidate = pickUnusedTile(null, used);
+                if (!candidate) break;
+                if (lineWouldMatch(r, c, candidate.classId)) continue;
+                chosen = candidate;
+                break;
+            }
+            if (!chosen) chosen = pickUnusedTile(null, used);
+            if (!chosen) return false;
+            board[r][c] = cloneTile(chosen);
+            used.add(chosen.id);
+        }
+    }
+    return findMatches().length === 0 && uniqueImageCountOnBoard();
+}
+
+/* Plant A A B / . . A so swapping B down is a match, then fill the rest. */
+function reshuffleBoardPlanted() {
+    const classIds = [];
+    activeCatalog.forEach(function (item) {
+        if (classIds.indexOf(item.classId) < 0) classIds.push(item.classId);
+    });
+    if (classIds.length < 2 || ROWS < 2 || COLS < 3) return false;
+
+    const spots = [];
+    for (let r = 0; r < ROWS - 1; r++) {
+        for (let c = 0; c < COLS - 2; c++) {
+            spots.push({ r: r, c: c });
+        }
+    }
+
+    for (let attempt = 0; attempt < 48; attempt++) {
+        const classA = classIds[attempt % classIds.length];
+        const classB = classIds[(attempt + 1) % classIds.length];
+        if (classA === classB) continue;
+        const spot = spots[attempt % spots.length];
+        const used = new Set();
+        const aTiles = tilesFromClass(classA, 3, used);
+        const bTiles = tilesFromClass(classB, 1, used);
+        if (!aTiles || !bTiles) continue;
+
+        board = [];
+        for (let r = 0; r < ROWS; r++) {
+            board[r] = new Array(COLS);
+        }
+        board[spot.r][spot.c] = aTiles[0];
+        board[spot.r][spot.c + 1] = aTiles[1];
+        board[spot.r][spot.c + 2] = bTiles[0];
+        board[spot.r + 1][spot.c + 2] = aTiles[2];
+
+        if (!fillBoardAvoidingMatches(used)) continue;
+        if (!findValidSwaps().length) continue;
+        return true;
+    }
+    return false;
+}
+
+function paintFullBoard() {
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            paintCell(r, c, true);
+        }
+    }
+    refreshSelection();
+}
+
+function announceReshuffle() {
+    const boardEl = document.getElementById("board");
+    document.getElementById("message").textContent = "没有可消除的交换，已重新排列棋盘";
+    if (!boardEl) return;
+    boardEl.classList.remove("just-reshuffled");
+    void boardEl.offsetWidth;
+    boardEl.classList.add("just-reshuffled");
+    setTimeout(function () {
+        boardEl.classList.remove("just-reshuffled");
+    }, 600);
+}
+
+function ensurePlayableBoard(announce) {
+    if (findMatches().length) return false;
+    if (findValidSwaps().length) return false;
+    if (!reshuffleBoardPlanted()) return false;
+    selected = null;
+    dismissHint();
+    paintFullBoard();
+    if (announce) announceReshuffle();
+    return true;
+}
+
 function applyHintClasses() {
     clearHintClasses();
     if (!hintPair) return;
@@ -1642,10 +1802,80 @@ function rowStridePx() {
     return b.getBoundingClientRect().top - a.getBoundingClientRect().top;
 }
 
+function classRunIfPlaced(col, r, classId) {
+    let n = 1;
+    for (let rr = r - 1; rr >= 0; rr--) {
+        if (!col[rr] || col[rr].classId !== classId) break;
+        n += 1;
+    }
+    for (let rr = r + 1; rr < ROWS; rr++) {
+        if (!col[rr] || col[rr].classId !== classId) break;
+        n += 1;
+    }
+    return n;
+}
+
+function horizRunIfPlaced(newBoard, r, c, classId) {
+    let n = 1;
+    for (let cc = c - 1; cc >= 0; cc--) {
+        if (!newBoard[r] || !newBoard[r][cc] || newBoard[r][cc].classId !== classId) break;
+        n += 1;
+    }
+    for (let cc = c + 1; cc < COLS; cc++) {
+        if (!newBoard[r] || !newBoard[r][cc] || newBoard[r][cc].classId !== classId) break;
+        n += 1;
+    }
+    return n;
+}
+
+function forbiddenSpawnClasses(col, newBoard, r, c) {
+    const seen = {};
+    const bad = [];
+    activeCatalog.forEach(function (item) {
+        if (seen[item.classId]) return;
+        seen[item.classId] = true;
+        if (classRunIfPlaced(col, r, item.classId) >= 3 ||
+            horizRunIfPlaced(newBoard, r, c, item.classId) >= 3) {
+            bad.push(item.classId);
+        }
+    });
+    return bad;
+}
+
+function pickGravitySpawn(col, newBoard, r, c, used) {
+    const forbidden = forbiddenSpawnClasses(col, newBoard, r, c);
+    for (let attempt = 0; attempt < 60; attempt++) {
+        const next = pickUnusedTile(forbidden, used);
+        if (!next) break;
+        if (classRunIfPlaced(col, r, next.classId) >= 3) continue;
+        if (horizRunIfPlaced(newBoard, r, c, next.classId) >= 3) continue;
+        return next;
+    }
+    let pool = activeCatalog.filter(function (item) {
+        return classRunIfPlaced(col, r, item.classId) < 3 &&
+            horizRunIfPlaced(newBoard, r, c, item.classId) < 3;
+    });
+    if (uniquenessRequired()) {
+        const uniquePool = pool.filter(function (item) {
+            return !used.has(item.id);
+        });
+        if (uniquePool.length) pool = uniquePool;
+    }
+    if (!pool.length) {
+        pool = activeCatalog.filter(function (item) {
+            return classRunIfPlaced(col, r, item.classId) < 3;
+        });
+    }
+    if (!pool.length) return pickUnusedTile(forbidden, used);
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function planGravity() {
     const moves = [];
     const spawns = [];
     const used = idsOnBoard();
+    const newBoard = [];
+    for (let r = 0; r < ROWS; r++) newBoard[r] = new Array(COLS);
 
     for (let c = 0; c < COLS; c++) {
         const kept = [];
@@ -1654,8 +1884,11 @@ function planGravity() {
         }
         const holes = ROWS - kept.length;
         const col = new Array(ROWS);
+        for (let i = 0; i < kept.length; i++) {
+            col[holes + i] = kept[i].tile;
+        }
         for (let i = 0; i < holes; i++) {
-            const next = pickUnusedTile(null, used);
+            const next = pickGravitySpawn(col, newBoard, i, c, used);
             if (!next) return { error: true, moves: [], spawns: [] };
             col[i] = cloneTile(next);
             used.add(next.id);
@@ -1663,7 +1896,6 @@ function planGravity() {
         }
         for (let i = 0; i < kept.length; i++) {
             const dest = holes + i;
-            col[dest] = kept[i].tile;
             if (dest !== kept[i].fromR) {
                 moves.push({
                     fromR: kept[i].fromR,
@@ -1674,7 +1906,12 @@ function planGravity() {
             }
         }
         for (let r = 0; r < ROWS; r++) {
-            board[r][c] = col[r];
+            newBoard[r][c] = col[r];
+        }
+    }
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            board[r][c] = newBoard[r][c];
         }
     }
     return { error: false, moves: moves, spawns: spawns };
@@ -1846,7 +2083,8 @@ async function clearMatches() {
         }
     }
 
-    if (!runEnded) {
+    const reshuffled = !runEnded && ensurePlayableBoard(true);
+    if (!runEnded && !reshuffled) {
         setTimeout(function () {
             if (!runEnded) document.getElementById("message").textContent = "点击相邻星系进行交换";
         }, 400);
@@ -2086,11 +2324,15 @@ function prepareBoard() {
         classCount + " classes · " + activeCatalog.length + " unique images · " + COLS + "×" + ROWS + " board";
 
     let ready = false;
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 40; i++) {
         if (initBoard() && uniqueImageCountOnBoard() && findValidSwaps().length) {
             ready = true;
             break;
         }
+    }
+    if (!ready) {
+        ready = reshuffleBoardPlanted() && uniqueImageCountOnBoard() &&
+            findMatches().length === 0 && findValidSwaps().length > 0;
     }
     if (!ready) {
         showStatus(
@@ -2104,6 +2346,7 @@ function prepareBoard() {
     showPlayArea();
     renderLegend();
     mountBoard();
+    ensurePlayableBoard(false);
     updateHud();
     updateHintButton();
     fitPlayLayout();

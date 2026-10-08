@@ -29,6 +29,8 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - Match by `classId`; unique `class/filename` unless the catalog is smaller than the board (Easy)
 - Board: 6×4 if unique count < 32, else 8×4
 - Gravity from the top; campaign hint after 3 failed swaps or 10s idle
+- After settle, if no legal swap remains, reshuffle the whole board (planted move, Chinese notice)
+- Gravity spawns must not instant-match in the new column or row; unused files of the just-cleared class are not dumped back as a stack
 - Challenge hints are a top button only (3 charges, +1 per 10 clears, cap 3)
 - Pause is at the top and opens the progress modal without resetting
 - Clear FX: pop then shatter, score pulse; Challenge also **+3s**
@@ -36,4 +38,4 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 
 ## Latest update
 
-[update/2026-10-08-pause-fit-challenge-hints.md](update/2026-10-08-pause-fit-challenge-hints.md)
+[update/2026-10-08-deadlock-reshuffle-and-spawn.md](update/2026-10-08-deadlock-reshuffle-and-spawn.md)

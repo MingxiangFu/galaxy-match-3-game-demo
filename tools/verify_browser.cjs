@@ -196,6 +196,98 @@ async function main() {
 
         await cdp.eval("resumeFromBrief()");
         await sleep(200);
+
+        const spawnLoop = await cdp.eval(`(function () {
+            const stacks = [];
+            for (let n = 0; n < 12; n++) {
+                const face = activeCatalog.find(function (item) { return item.classId === "FaceOnSpirals"; });
+                const other = activeCatalog.find(function (item) { return item.classId !== "FaceOnSpirals"; });
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        board[r][c] = cloneTile(c === 0 ? face : other);
+                    }
+                }
+                board[0][2] = cloneTile(other);
+                board[1][2] = cloneTile(face);
+                board[2][2] = cloneTile(face);
+                board[3][2] = cloneTile(face);
+                board[1][2] = null;
+                board[2][2] = null;
+                board[3][2] = null;
+                const g = planGravity();
+                if (g.error) return { error: true, n: n };
+                const ids = [board[0][2].classId, board[1][2].classId, board[2][2].classId];
+                stacks.push(ids.join(","));
+                if (ids[0] === ids[1] && ids[1] === ids[2]) {
+                    return { fail: ids, n: n };
+                }
+            }
+            return { ok: true, stacks: stacks };
+        })()`);
+        if (spawnLoop.error || spawnLoop.fail) {
+            throw new Error("vertical refill same-class loop " + JSON.stringify(spawnLoop));
+        }
+        report.push("vertical clear: 12 refills did not drop three identical classes");
+
+        const deadlock = await cdp.eval(`(function () {
+            clearsDone = 4;
+            elapsedSec = 9;
+            score = 70;
+            hintCharges = 2;
+            hintTriggered = false;
+            let dead = false;
+            for (let i = 0; i < 250; i++) {
+                if (initBoard() && findMatches().length === 0 && findValidSwaps().length === 0) {
+                    dead = true;
+                    break;
+                }
+            }
+            const beforeIds = board.map(function (row) {
+                return row.map(function (t) { return t && t.id; });
+            });
+            const did = ensurePlayableBoard(true);
+            const afterIds = board.map(function (row) {
+                return row.map(function (t) { return t && t.id; });
+            });
+            return {
+                dead: dead,
+                did: did,
+                swaps: findValidSwaps().length,
+                matches: findMatches().length,
+                msg: document.getElementById("message").textContent,
+                clears: clearsDone,
+                elapsed: elapsedSec,
+                score: score,
+                charges: hintCharges,
+                changed: JSON.stringify(beforeIds) !== JSON.stringify(afterIds)
+            };
+        })()`);
+        if (!deadlock.dead) throw new Error("could not force an Easy 6x4 dead board");
+        if (!deadlock.did || deadlock.swaps < 1 || deadlock.matches) {
+            throw new Error("dead board did not reshuffle into a playable board " + JSON.stringify(deadlock));
+        }
+        if (!deadlock.msg.includes("重新排列")) throw new Error("reshuffle notice missing");
+        if (deadlock.clears !== 4 || deadlock.elapsed !== 9 || deadlock.score !== 70 || deadlock.charges !== 2) {
+            throw new Error("reshuffle reset progress " + JSON.stringify(deadlock));
+        }
+        report.push("deadlock reshuffle: Easy 6x4 gained a swap, progress unchanged");
+
+        const noShuffle = await cdp.eval(`(function () {
+            if (!findValidSwaps().length) reshuffleBoardPlanted();
+            const before = JSON.stringify(board.map(function (row) {
+                return row.map(function (t) { return t && t.id; });
+            }));
+            const did = ensurePlayableBoard(true);
+            const after = JSON.stringify(board.map(function (row) {
+                return row.map(function (t) { return t && t.id; });
+            }));
+            return { did: did, same: before === after, swaps: findValidSwaps().length };
+        })()`);
+        if (noShuffle.did || !noShuffle.same || noShuffle.swaps < 1) {
+            throw new Error("playable board should not reshuffle " + JSON.stringify(noShuffle));
+        }
+        report.push("playable board is not reshuffled");
+
         const pauseKeep = await cdp.eval(`(function () {
             const before = board.map(function (row) { return row.map(function (t) { return t && t.id; }); });
             clearsDone = 5;

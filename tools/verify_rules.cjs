@@ -111,11 +111,62 @@ function initBoard(catalog, rows, cols) {
     return board;
 }
 
+function classRun(col, r, classId, rows) {
+    let n = 1;
+    for (let rr = r - 1; rr >= 0; rr--) {
+        if (!col[rr] || col[rr].classId !== classId) break;
+        n += 1;
+    }
+    for (let rr = r + 1; rr < rows; rr++) {
+        if (!col[rr] || col[rr].classId !== classId) break;
+        n += 1;
+    }
+    return n;
+}
+
+function horizRun(newBoard, r, c, classId, cols) {
+    let n = 1;
+    for (let cc = c - 1; cc >= 0; cc--) {
+        if (!newBoard[r][cc] || newBoard[r][cc].classId !== classId) break;
+        n += 1;
+    }
+    for (let cc = c + 1; cc < cols; cc++) {
+        if (!newBoard[r][cc] || newBoard[r][cc].classId !== classId) break;
+        n += 1;
+    }
+    return n;
+}
+
+function pickGravitySpawn(catalog, col, newBoard, r, c, used, rows, cols) {
+    const requireUnique = catalog.length >= rows * cols;
+    for (let attempt = 0; attempt < 60; attempt++) {
+        const next = pickUnusedTile(catalog, newBoard, used);
+        if (!next) break;
+        if (classRun(col, r, next.classId, rows) >= 3) continue;
+        if (horizRun(newBoard, r, c, next.classId, cols) >= 3) continue;
+        return next;
+    }
+    let pool = catalog.filter((item) =>
+        classRun(col, r, item.classId, rows) < 3 &&
+        horizRun(newBoard, r, c, item.classId, cols) < 3
+    );
+    if (requireUnique) {
+        const uniquePool = pool.filter((item) => !used.has(item.id));
+        if (uniquePool.length) pool = uniquePool;
+    }
+    if (!pool.length) {
+        pool = catalog.filter((item) => classRun(col, r, item.classId, rows) < 3);
+    }
+    if (!pool.length) throw new Error("no image for gravity spawn");
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function gravityFill(catalog, board, rows, cols, cleared) {
     const snapshot = board.map((row) => row.map((tile) => tile && tile.id));
     for (const pos of cleared) board[pos.r][pos.c] = null;
     const used = idsOnBoard(board);
     const survivorOrder = [];
+    const newBoard = Array.from({ length: rows }, () => new Array(cols));
     for (let c = 0; c < cols; c++) {
         const kept = [];
         for (let r = 0; r < rows; r++) {
@@ -124,14 +175,16 @@ function gravityFill(catalog, board, rows, cols, cleared) {
         survivorOrder.push(kept.map((tile) => tile.id));
         const holes = rows - kept.length;
         const col = new Array(rows);
+        for (let i = 0; i < kept.length; i++) col[holes + i] = kept[i];
         for (let i = 0; i < holes; i++) {
-            const next = pickUnusedTile(catalog, board, used);
-            if (!next) throw new Error("no image for gravity spawn");
+            const next = pickGravitySpawn(catalog, col, newBoard, i, c, used, rows, cols);
             col[i] = { id: next.id, classId: next.classId };
             used.add(next.id);
         }
-        for (let i = 0; i < kept.length; i++) col[holes + i] = kept[i];
-        for (let r = 0; r < rows; r++) board[r][c] = col[r];
+        for (let r = 0; r < rows; r++) newBoard[r][c] = col[r];
+    }
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) board[r][c] = newBoard[r][c];
     }
     for (let c = 0; c < cols; c++) {
         const packed = [];
@@ -252,6 +305,33 @@ for (const folder of EXPECTED_FOLDERS) {
         if (catalog.length >= size.cells && new Set(after).size !== after.length) {
             throw new Error(folder + " duplicate after gravity");
         }
+        const spawnClass = [board[0][2].classId, board[1][2].classId, board[2][2].classId];
+        if (spawnClass[0] === spawnClass[1] && spawnClass[1] === spawnClass[2]) {
+            throw new Error(folder + " vertical refill spawned three of the same class");
+        }
+    }
+
+    for (let i = 0; i < 20; i++) {
+        let board = null;
+        for (let n = 0; n < 80; n++) {
+            board = initBoard(catalog, size.rows, size.cols);
+            if (board && findValidSwaps(board, size.rows, size.cols).length) break;
+            board = null;
+        }
+        if (!board) throw new Error(folder + " no opening board for vertical-clear spawn test");
+        const target = catalog.find((item) => item.classId === "FaceOnSpirals");
+        const other = catalog.find((item) => item.classId !== "FaceOnSpirals");
+        board[0][2] = { id: other.id, classId: other.classId };
+        board[1][2] = { id: target.id, classId: target.classId };
+        board[2][2] = { id: target.id, classId: target.classId };
+        board[3][2] = { id: target.id, classId: target.classId };
+        gravityFill(catalog, board, size.rows, size.cols, [{ r: 1, c: 2 }, { r: 2, c: 2 }, { r: 3, c: 2 }]);
+        if (board[0][2].classId === board[1][2].classId && board[1][2].classId === board[2][2].classId) {
+            throw new Error(folder + " same-class self-clear loop after vertical 3");
+        }
+        const colMatches = findMatches(board, size.rows, size.cols).filter((key) => key.endsWith(",2"));
+        const spawnTriple = ["0,2", "1,2", "2,2"].every((key) => colMatches.includes(key));
+        if (spawnTriple) throw new Error(folder + " new column stack instantly matched");
     }
 }
 
@@ -276,7 +356,10 @@ const required = [
     ["resetAllProgress", "console reset"],
     ["win-stars .on", "results filled-star style"],
     ["fitPlayLayout", "viewport fit"],
-    ["onclick=\"pauseRun()\">暂停", "top pause control"]
+    ["onclick=\"pauseRun()\">暂停", "top pause control"],
+    ["ensurePlayableBoard", "deadlock reshuffle"],
+    ["reshuffleBoardPlanted", "planted-move reshuffle"],
+    ["pickGravitySpawn", "match-aware gravity spawn"]
 ];
 const playChunk = html.slice(html.indexOf('id="playArea"'), html.indexOf('id="briefOverlay"'));
 if (playChunk.includes("restartCurrentRun")) {
