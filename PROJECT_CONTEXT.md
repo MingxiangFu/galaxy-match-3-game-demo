@@ -20,6 +20,7 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - `tools/build_index.py` — rebuild `index.html`
 - `tools/game.template.html` — game template
 - `tools/verify_rules.cjs` — class-match, uniqueness/reuse, gravity, constants
+- `tools/verify_browser.cjs` — headless Chrome checks for locks, stars, challenge, PNG
 - `update/` — change notes
 
 ## Rules that matter
