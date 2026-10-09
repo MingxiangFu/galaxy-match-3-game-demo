@@ -2,14 +2,14 @@
 
 Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder). Unique `class/filename` on the board when the catalog is large enough. After a clear, survivors fall and new images spawn at the top.
 
-本目录是可玩的星系消消乐：按类别匹配；图够时不重复文件；消除后下落补位。
+本目录是可玩的星系消消乐：按类别匹配；图够时不重复文件；消除后下落补位。玩家界面中英双语。
 
 ## Modes
 
-- **Campaign:** Easy / Normal / Hard. Clear `n = 20` successful matches (`CLEARS_TO_WIN`). Three stars: clear, clear within 90s (`STAR_TIME_LIMIT`), no hints. Easy is open; later levels need ≥1 star on the previous card.
-- **Challenge:** `GalaxyImagesByLevel/Challange` (real folder spelling). Score + countdown, +3s per clear. Unlocks at 9 stars. Optional PNG result download.
+- **Campaign:** Easy / Normal / Hard. Clear `n = 20` successful matches (`CLEARS_TO_WIN`). Three stars: clear the level; finish within the level time (Easy 60s / Normal 90s / Hard 120s); use **at most one** hint. Easy is a tutorial with a fixed opening board; later levels need ≥1 star on the previous card.
+- **Challenge:** `GalaxyImagesByLevel/Challange` (real folder spelling). Score + countdown, +3s per clear. Unlocks at 9 stars. Optional PNG result download. Start modal explains score, +3s, and 10s hint refill.
 
-战役为三关 20 消与三星；挑战为倒计时，9 星解锁。
+战役为三关 20 消与三星；简单关带教程；挑战为倒计时，9 星解锁。
 
 ## Layout
 
@@ -21,21 +21,21 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - `tools/build_index.py` — embedder used by the wrapper
 - `tools/game.template.html` — game template
 - `tools/verify_rules.cjs` — class-match, uniqueness/reuse, gravity, constants
-- `tools/verify_browser.cjs` — headless Chrome checks for locks, stars, challenge, PNG
+- `tools/verify_browser.cjs` — headless Chrome checks for locks, stars, tutorial, challenge, PNG
 - `update/` — change notes
 
 ## Rules that matter
 
 - Match by `classId`; unique `class/filename` unless the catalog is smaller than the board (Easy)
 - Board: 6×4 if unique count < 32, else 8×4
-- Gravity from the top; campaign hint after 3 failed swaps or 10s idle
-- After settle, if no legal swap remains, reshuffle the whole board (planted move, Chinese notice)
-- Gravity spawns must not instant-match in the new column or row; unused files of the just-cleared class are not dumped back as a stack
-- Challenge hints are a top button only (3 charges, +1 per 10 clears, cap 3)
-- Pause is at the top and opens the progress modal without resetting
-- Clear FX: pop then shatter, score pulse; Challenge also **+3s**
+- Gravity from the top; after settle, if no legal swap remains, reshuffle the whole board (planted move)
+- Gravity spawns must not instant-match; unused files of the just-cleared class are not dumped back as a stack
+- Hints are **manual** in every mode (button or **H**): 3 charges, cap 3, **+1 every 10s** below the cap. No auto-hint.
+- Pause is at the top (**Esc**); it does not reset the board or progress
+- Player language: default Chinese, toggle persists (`progress.lang`)
+- Easy tutorial completion persists (`progress.tutorialDone`); skip checkbox appears afterwards, checked by default
 - Progress: `localStorage` key `galaxyGameDemo.progress.v1`
 
 ## Latest update
 
-[update/2026-10-08-deadlock-reshuffle-and-spawn.md](update/2026-10-08-deadlock-reshuffle-and-spawn.md)
+[update/2026-10-09-tutorial-bilingual-manual-hints.md](update/2026-10-09-tutorial-bilingual-manual-hints.md)

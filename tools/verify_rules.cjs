@@ -337,13 +337,13 @@ for (const folder of EXPECTED_FOLDERS) {
 
 const required = [
     ["CLEARS_TO_WIN = 20", "20-clear win constant"],
-    ["STAR_TIME_LIMIT = 90", "90s star constant"],
+    ["STAR_TIME = { easy: 60, normal: 90, hard: 120 }", "per-level star times"],
+    ["STAR3_HINT_MAX = 1", "star 3 allows one hint"],
     ["TIME_BONUS = 3", "+3s time bonus"],
-    ["FAIL_HINT_COUNT = 3", "3-fail hint"],
-    ["IDLE_HINT_MS = 10000", "10s idle hint"],
-    ["HINT_CHARGE_MAX = 3", "challenge hint cap"],
-    ["HINT_CHARGE_EVERY = 10", "challenge hint every 10 clears"],
-    ["useChallengeHint", "challenge hint button"],
+    ["HINT_CHARGE_MAX = 3", "hint charge cap"],
+    ["HINT_REFILL_SEC = 10", "hint refill every 10s"],
+    ["function useHint()", "manual hint button"],
+    ["tickHintRefill", "timed hint refill"],
     ["STORAGE_KEY = \"galaxyGameDemo.progress.v1\"", "progress storage key"],
     ["CHALLENGE_FOLDER = \"Challange\"", "Challange folder spelling"],
     ["bonus-float", "+3s popup"],
@@ -359,7 +359,16 @@ const required = [
     ["onclick=\"pauseRun()\">暂停", "top pause control"],
     ["ensurePlayableBoard", "deadlock reshuffle"],
     ["reshuffleBoardPlanted", "planted-move reshuffle"],
-    ["pickGravitySpawn", "match-aware gravity spawn"]
+    ["pickGravitySpawn", "match-aware gravity spawn"],
+    ["buildTutorialBoard", "Easy tutorial board"],
+    ["skipTutorial", "skip tutorial checkbox"],
+    ["function toggleLang()", "language toggle"],
+    ["onKeyDown", "Esc/H shortcuts"]
+];
+const forbidden = [
+    ["FAIL_HINT_COUNT", "auto-hint after misses"],
+    ["IDLE_HINT_MS", "auto-hint after idle"],
+    ["HINT_CHARGE_EVERY = 10", "old +1 per 10 clears"]
 ];
 const playChunk = html.slice(html.indexOf('id="playArea"'), html.indexOf('id="briefOverlay"'));
 if (playChunk.includes("restartCurrentRun")) {
@@ -367,6 +376,9 @@ if (playChunk.includes("restartCurrentRun")) {
 }
 for (const [token, label] of required) {
     if (!html.includes(token)) throw new Error("missing " + label);
+}
+for (const [token, label] of forbidden) {
+    if (html.includes(token)) throw new Error("should not include " + label);
 }
 
 console.log("ok: 5-class matching, ByLevel catalogs, uniqueness/reuse, gravity, stars, challenge");

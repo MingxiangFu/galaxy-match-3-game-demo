@@ -166,14 +166,22 @@ async function main() {
             challengeLocked: document.getElementById("challengeCard").classList.contains("locked"),
             storageKey: STORAGE_KEY,
             clearsToWin: CLEARS_TO_WIN,
-            starLimit: STAR_TIME_LIMIT
+            starEasy: STAR_TIME.easy,
+            starNormal: STAR_TIME.normal,
+            starHard: STAR_TIME.hard,
+            lang: lang,
+            homeLang: document.getElementById("homeTitle").textContent
         })`);
         if (home.easyLocked) throw new Error("Easy should be open");
         if (!home.normalLocked || !home.hardLocked) throw new Error("Normal/Hard should start locked");
         if (!home.challengeLocked) throw new Error("Challenge should start locked");
         if (home.storageKey !== "galaxyGameDemo.progress.v1") throw new Error("wrong storage key");
-        if (home.clearsToWin !== 20 || home.starLimit !== 90) throw new Error("wrong campaign constants");
-        report.push("lock: Easy open, Normal/Hard/Challenge locked");
+        if (home.clearsToWin !== 20) throw new Error("wrong campaign constants");
+        if (home.starEasy !== 60 || home.starNormal !== 90 || home.starHard !== 120) {
+            throw new Error("star times should be 60/90/120 " + JSON.stringify(home));
+        }
+        if (home.lang !== "zh" || !home.homeLang.includes("星系")) throw new Error("default language should be Chinese");
+        report.push("lock: Easy open, Normal/Hard/Challenge locked; stars 60/90/120; default zh");
 
         await cdp.eval("startCampaign('easy')");
         await sleep(400);
@@ -184,18 +192,38 @@ async function main() {
             stars: document.getElementById("briefStars").innerText,
             cols: COLS,
             rows: ROWS,
-            cells: document.querySelectorAll("#board .cell").length
+            cells: document.querySelectorAll("#board .cell").length,
+            skipHidden: document.getElementById("skipTutorialRow").classList.contains("hidden"),
+            tutorial: tutorialActive
         })`);
         if (!intro.brief) throw new Error("intro modal missing");
         if (!intro.clears.includes("0 / 20")) throw new Error("intro should show 0 / 20");
-        if (!intro.stars.includes("通关本关") || !intro.stars.includes("90") || !intro.stars.includes("提示")) {
-            throw new Error("intro missing star conditions");
+        if (!intro.stars.includes("通关本关") || !intro.stars.includes("60") || !intro.stars.includes("提示不超过 1")) {
+            throw new Error("intro missing Easy star conditions " + intro.stars);
         }
+        if (!intro.skipHidden) throw new Error("first run must not offer skip tutorial");
+        if (!intro.tutorial) throw new Error("first Easy run should arm the tutorial");
         if (intro.cols !== 6 || intro.rows !== 4 || intro.cells !== 24) throw new Error("Easy board should be 6x4");
-        report.push("enter Easy: intro modal, 0/20, 6x4 board");
+        report.push("enter Easy: intro modal, 0/20, 60s, no skip, 6x4 board");
 
         await cdp.eval("resumeFromBrief()");
         await sleep(200);
+
+        const tutorialLock = await cdp.eval(`(async function () {
+            const step0 = tutorialStep;
+            await clickCell(3, 5);
+            const blocked = selected;
+            tutorialNext();
+            const step1 = tutorialStep;
+            const hintHidden = document.getElementById("hintBtn").classList.contains("hidden");
+            return { step0: step0, blocked: blocked, step1: step1, hintHidden: hintHidden, off: document.querySelectorAll("#board .cell.tutorial-off").length };
+        })()`);
+        if (tutorialLock.step0 !== "class") throw new Error("tutorial should start on class step");
+        if (tutorialLock.blocked) throw new Error("tutorial class step should ignore other tiles");
+        if (tutorialLock.step1 !== "swap") throw new Error("Next should advance to swap");
+        if (tutorialLock.hintHidden) throw new Error("hint button should be visible in campaign");
+        if (tutorialLock.off < 1) throw new Error("non-taught tiles should be dimmed");
+        report.push("tutorial: class step locks other tiles, Next goes to swap, hint button visible");
 
         const spawnLoop = await cdp.eval(`(function () {
             const stacks = [];
@@ -234,7 +262,7 @@ async function main() {
             elapsedSec = 9;
             score = 70;
             hintCharges = 2;
-            hintTriggered = false;
+            hintUses = 0;
             let dead = false;
             for (let i = 0; i < 400; i++) {
                 const used = new Set();
@@ -374,19 +402,19 @@ async function main() {
         await cdp.eval("fitPlayLayout()");
         report.push("pause visible at the top on a 500px-tall window");
 
-        await cdp.eval("resumeFromBrief(); elapsedSec = 91; pauseRun()");
+        await cdp.eval("resumeFromBrief(); elapsedSec = 61; pauseRun()");
         await sleep(200);
         const timeForfeit = await cdp.eval("document.getElementById('briefStars').innerText");
-        if (!timeForfeit.includes("已失去")) throw new Error("time forfeit not shown");
-        report.push("forfeit star 2: elapsed > 90s shows 已失去");
+        if (!timeForfeit.includes("已失去") || !timeForfeit.includes("60")) throw new Error("time forfeit not shown for Easy 60s");
+        report.push("forfeit star 2: elapsed > 60s shows 已失去");
 
-        await cdp.eval("resumeFromBrief(); hintTriggered = true; showHint(); pauseRun()");
+        await cdp.eval("resumeFromBrief(); hintUses = 2; pauseRun()");
         await sleep(200);
         const hintForfeit = await cdp.eval("document.getElementById('briefStars').innerText");
-        if (!hintForfeit.includes("不使用提示通关") || !hintForfeit.match(/已失去/g) || hintForfeit.match(/已失去/g).length < 2) {
+        if (!hintForfeit.includes("提示不超过 1") || !hintForfeit.match(/已失去/g) || hintForfeit.match(/已失去/g).length < 2) {
             throw new Error("hint forfeit not shown together with time forfeit");
         }
-        report.push("forfeit star 3: hint triggered shows 已失去");
+        report.push("forfeit star 3: two hints show 已失去");
 
         await cdp.eval("resumeFromBrief(); finishCampaignWin()");
         await sleep(300);
@@ -408,14 +436,14 @@ async function main() {
         if (oneStarPaint[0].color === oneStarPaint[1].color) throw new Error("1-star result uses the same color for empty stars");
         report.push("20-clear path: win overlay, only star 1 kept, best time stored");
 
-        await cdp.eval("goHome(); startCampaign('easy'); elapsedSec = 12; hintTriggered = true; finishCampaignWin()");
+        await cdp.eval("goHome(); startCampaign('easy'); elapsedSec = 12; hintUses = 2; finishCampaignWin()");
         await sleep(200);
         const twoStarPaint = await cdp.eval(`([...document.querySelectorAll("#winStars span")].map(function (s) {
             return { on: s.classList.contains("on"), color: getComputedStyle(s).color };
         }))`);
         if (!twoStarPaint[0].on || !twoStarPaint[1].on || twoStarPaint[2].on) throw new Error("2-star result markup wrong");
         if (twoStarPaint[0].color === twoStarPaint[2].color) throw new Error("2-star empty star is not dim");
-        await cdp.eval("goHome(); startCampaign('easy'); elapsedSec = 12; hintTriggered = false; finishCampaignWin()");
+        await cdp.eval("goHome(); startCampaign('easy'); elapsedSec = 12; hintUses = 1; finishCampaignWin()");
         await sleep(200);
         const threeStarPaint = await cdp.eval(`([...document.querySelectorAll("#winStars span")].map(function (s) {
             return { on: s.classList.contains("on"), color: getComputedStyle(s).color };
@@ -425,7 +453,19 @@ async function main() {
         if (twoStarPaint.filter(function (s) { return s.on; }).length === threeStarPaint.filter(function (s) { return s.on; }).length) {
             throw new Error("2-star and 3-star look the same");
         }
-        report.push("results: 1-star and 2-star paint differ from 3-star");
+        report.push("results: 1-star and 2-star paint differ from 3-star; star 3 kept with exactly 1 hint");
+
+        await cdp.eval("goHome(); startCampaign('easy')");
+        await sleep(250);
+        const skipDefault = await cdp.eval(`({
+            hidden: document.getElementById("skipTutorialRow").classList.contains("hidden"),
+            checked: document.getElementById("skipTutorial").checked,
+            done: progress.tutorialDone
+        })`);
+        if (skipDefault.hidden || !skipDefault.checked || !skipDefault.done) {
+            throw new Error("after first completion skip should show and be checked " + JSON.stringify(skipDefault));
+        }
+        report.push("Easy skip tutorial: shown and checked by default after first completion");
 
         await cdp.eval("goHome()");
         await sleep(200);
@@ -443,18 +483,20 @@ async function main() {
 
         await cdp.eval("startCampaign('normal')");
         await sleep(400);
-        const normalBoard = await cdp.eval("({cols:COLS, rows:ROWS, cells:document.querySelectorAll('#board .cell').length, brief:document.getElementById('briefOverlay').classList.contains('show')})");
+        const normalBoard = await cdp.eval("({cols:COLS, rows:ROWS, cells:document.querySelectorAll('#board .cell').length, brief:document.getElementById('briefOverlay').classList.contains('show'), stars:document.getElementById('briefStars').innerText})");
         if (normalBoard.cols !== 6 || normalBoard.rows !== 4 || normalBoard.cells !== 24) throw new Error("Normal board should be 6x4");
-        await cdp.eval("elapsedSec = 12; hintTriggered = false; finishCampaignWin(); goHome()");
+        if (!normalBoard.stars.includes("90")) throw new Error("Normal enter copy should show 90s");
+        await cdp.eval("elapsedSec = 12; hintUses = 0; finishCampaignWin(); goHome()");
         await sleep(250);
         const hardGate = await cdp.eval("({hardLocked:document.querySelector('[data-level=\"hard\"]').classList.contains('locked'), normalStars:progress.stars.normal})");
         if (hardGate.hardLocked) throw new Error("Hard should unlock after Normal has a star");
         await cdp.eval("startCampaign('hard')");
         await sleep(400);
-        const hardBoard = await cdp.eval("({cols:COLS, rows:ROWS, cells:document.querySelectorAll('#board .cell').length})");
+        const hardBoard = await cdp.eval("({cols:COLS, rows:ROWS, cells:document.querySelectorAll('#board .cell').length, stars:document.getElementById('briefStars').innerText})");
         if (hardBoard.cols !== 8 || hardBoard.rows !== 4 || hardBoard.cells !== 32) throw new Error("Hard board should be 8x4");
+        if (!hardBoard.stars.includes("120")) throw new Error("Hard enter copy should show 120s");
         await cdp.eval("goHome()");
-        report.push("Normal 6x4 unlocks Hard; Hard is 8x4");
+        report.push("Normal 6x4 / 90s unlocks Hard; Hard is 8x4 / 120s");
 
         await cdp.eval(`progress.stars = {easy:[true,true,true],normal:[true,true,true],hard:[true,true,true]}; saveProgress(); renderHome()`);
         await sleep(150);
@@ -496,13 +538,21 @@ async function main() {
             rows: ROWS,
             folder: activeCatalog.length,
             mode,
-            timeLeft
+            timeLeft,
+            brief: document.getElementById("briefOverlay").classList.contains("show"),
+            lead: document.getElementById("briefLead").textContent
         })`);
         if (ch.cols !== 8 || ch.rows !== 4) throw new Error("Challenge board should be 8x4");
         if (ch.mode !== "challenge") throw new Error("not in challenge mode");
         if (ch.folder !== 105) throw new Error("Challenge catalog should be 105 images, got " + ch.folder);
-        report.push("Challenge: 8x4 board, Challange catalog 105 images");
+        if (!ch.brief) throw new Error("Challenge should open with a start modal");
+        if (!ch.lead.includes("3") || !ch.lead.includes("10") || !ch.lead.includes("+")) {
+            throw new Error("Challenge start modal should explain score, +3s, and 10s hint refill: " + ch.lead);
+        }
+        report.push("Challenge: 8x4 board, Challange catalog 105 images, start modal");
 
+        await cdp.eval("resumeFromBrief()");
+        await sleep(200);
         const hintStart = await cdp.eval(`({
             charges: hintCharges,
             label: document.getElementById("hintBtn").textContent,
@@ -511,36 +561,37 @@ async function main() {
         if (hintStart.hidden || hintStart.charges !== 3 || !hintStart.label.includes("3")) {
             throw new Error("challenge should start with 3 visible hint charges");
         }
-        await cdp.eval("failSwaps = 9; requestHint(); maybeFlushHint();");
+        await cdp.eval("failSwaps = 9;");
         await sleep(150);
         const noAuto = await cdp.eval("document.querySelectorAll('#board .cell.hint').length");
-        if (noAuto) throw new Error("challenge must not auto-hint after missed swaps");
-        await cdp.eval("useChallengeHint()");
+        if (noAuto) throw new Error("no mode may auto-hint after missed swaps");
+        await cdp.eval("useHint()");
         await sleep(150);
         const spent = await cdp.eval(`({
             charges: hintCharges,
             hints: document.querySelectorAll("#board .cell.hint").length,
-            label: document.getElementById("hintBtn").textContent
+            label: document.getElementById("hintBtn").textContent,
+            uses: hintUses
         })`);
-        if (spent.charges !== 2 || spent.hints < 2 || !spent.label.includes("2")) {
+        if (spent.charges !== 2 || spent.hints < 2 || !spent.label.includes("2") || spent.uses !== 1) {
             throw new Error("hint button should spend one charge " + JSON.stringify(spent));
         }
         const cap = await cdp.eval(`(function () {
             hintCharges = 3;
-            hintChargeProgress = 0;
-            for (let i = 0; i < 15; i++) grantChallengeHintProgress();
-            const atCap = { charges: hintCharges, progress: hintChargeProgress };
+            hintRefillSec = 0;
+            for (let i = 0; i < 15; i++) tickHintRefill();
+            const atCap = { charges: hintCharges, refill: hintRefillSec };
             hintCharges = 2;
-            hintChargeProgress = 0;
-            for (let i = 0; i < 9; i++) grantChallengeHintProgress();
-            const nine = { charges: hintCharges, progress: hintChargeProgress };
-            grantChallengeHintProgress();
-            return { atCap: atCap, nine: nine, ten: { charges: hintCharges, progress: hintChargeProgress } };
+            hintRefillSec = 0;
+            for (let i = 0; i < 9; i++) tickHintRefill();
+            const nine = { charges: hintCharges, refill: hintRefillSec };
+            tickHintRefill();
+            return { atCap: atCap, nine: nine, ten: { charges: hintCharges, refill: hintRefillSec } };
         })()`);
-        if (cap.atCap.charges !== 3 || cap.atCap.progress !== 0) throw new Error("clears at cap must not count");
-        if (cap.nine.charges !== 2 || cap.nine.progress !== 9) throw new Error("9 clears below cap should not grant yet");
-        if (cap.ten.charges !== 3 || cap.ten.progress !== 0) throw new Error("10 clears below cap should grant +1");
-        report.push("challenge hints: button-only, 3 start, +1 per 10, cap 3");
+        if (cap.atCap.charges !== 3 || cap.atCap.refill !== 0) throw new Error("ticks at cap must not refill");
+        if (cap.nine.charges !== 2 || cap.nine.refill !== 9) throw new Error("9s below cap should not grant yet");
+        if (cap.ten.charges !== 3 || cap.ten.refill !== 0) throw new Error("10s below cap should grant +1");
+        report.push("hints: manual only, 3 start, +1 every 10s, cap 3");
 
         await cdp.eval("score = 42; elapsedSec = 17; endChallenge()");
         await sleep(200);
@@ -583,6 +634,67 @@ async function main() {
         const persistUnlock = await cdp.eval("progress.challengeUnlocked && challengeUnlocked()");
         if (!persistUnlock) throw new Error("reload lost console challenge unlock");
         report.push("reload keeps console challenge unlock");
+
+        await cdp.eval("resetAllProgress()");
+        await cdp.eval("startCampaign('easy'); resumeFromBrief()");
+        await sleep(200);
+        await cdp.eval("completeTutorial()");
+        const afterTutor = await cdp.eval("({done: progress.tutorialDone, step: tutorialStep, active: tutorialActive})");
+        if (!afterTutor.done || afterTutor.active) throw new Error("completeTutorial should unlock and persist");
+        report.push("tutorial unlock persists in localStorage");
+
+        await cdp.eval("goHome(); startCampaign('easy'); resumeFromBrief()");
+        await sleep(200);
+        await cdp.eval("failSwaps = 9;");
+        const campaignNoAuto = await cdp.eval("document.querySelectorAll('#board .cell.hint').length");
+        if (campaignNoAuto) throw new Error("campaign must not auto-hint");
+        report.push("campaign does not auto-hint after misses");
+
+        await cdp.eval(`window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))`);
+        await sleep(150);
+        const escPause = await cdp.eval(`({
+            brief: document.getElementById("briefOverlay").classList.contains("show"),
+            title: document.getElementById("briefTitle").textContent
+        })`);
+        if (!escPause.brief || escPause.title !== "暂停") throw new Error("Esc should pause");
+        report.push("Esc pauses the run");
+
+        await cdp.eval("resumeFromBrief()");
+        await sleep(150);
+        await cdp.eval("dismissHint(); hintPair = null; hintCharges = 3;");
+        await cdp.eval(`window.dispatchEvent(new KeyboardEvent("keydown", { key: "h", bubbles: true }))`);
+        await sleep(150);
+        const hHint = await cdp.eval(`({
+            charges: hintCharges,
+            uses: hintUses,
+            hints: document.querySelectorAll("#board .cell.hint").length
+        })`);
+        if (hHint.charges !== 2 || hHint.uses < 1 || hHint.hints < 2) {
+            throw new Error("H should spend a hint charge " + JSON.stringify(hHint));
+        }
+        report.push("H spends a hint charge");
+
+        await cdp.eval("goHome(); toggleLang()");
+        await sleep(100);
+        const enHome = await cdp.eval(`({
+            lang: lang,
+            title: document.getElementById("homeTitle").textContent,
+            stored: JSON.parse(localStorage.getItem(STORAGE_KEY)).lang
+        })`);
+        if (enHome.lang !== "en" || !enHome.title.toLowerCase().includes("galaxy") || enHome.stored !== "en") {
+            throw new Error("language toggle did not switch to English " + JSON.stringify(enHome));
+        }
+        await cdp.eval("location.reload()");
+        await sleep(400);
+        await cdp.waitReady();
+        const enReload = await cdp.eval(`({
+            lang: lang,
+            title: document.getElementById("homeTitle").textContent
+        })`);
+        if (enReload.lang !== "en" || !enReload.title.toLowerCase().includes("galaxy")) {
+            throw new Error("language did not persist across reload");
+        }
+        report.push("language toggle persists across reload");
 
         cdp.close();
         console.log("ok: browser checks");

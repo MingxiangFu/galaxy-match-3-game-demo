@@ -1,8 +1,8 @@
 # Galaxy classification match-3 demo
 
-Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder), not identical pixels. Home selects Easy / Normal / Hard; Challenge uses the `Challange` folder after 9 stars.
+Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder), not identical pixels. Home selects Easy / Normal / Hard; Challenge uses the `Challange` folder after 9 stars. The player UI is bilingual (zh/en).
 
-这是一个按星系形态分类的科普消消乐。主页选简单 / 普通 / 困难；集齐 9 星后开放挑战模式。
+这是一个按星系形态分类的科普消消乐。主页选简单 / 普通 / 困难；集齐 9 星后开放挑战模式。玩家界面可中英切换。
 
 ## Play
 
@@ -11,8 +11,9 @@ Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfo
 1. Open `index.html` in a browser (double-click, or a local server).
 2. Optional:
    `python3 -m http.server 43191 --bind 127.0.0.1`
-3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level, finish within **90s**, trigger **no hints**.
-4. Challenge: score plus a 60s countdown (**+3s** per clear). When a run ends, save a result PNG.
+3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level; finish within **60s / 90s / 120s** (Easy / Normal / Hard); use **at most one** hint. Easy is a tutorial; after the first completion you can skip it (checked by default).
+4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 every 10s. When a run ends, save a result PNG.
+5. Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default Chinese).
 
 `index.html` is a single portable file (inline CSS/JS, JPEG data URIs). Image bytes are not gzipped.
 
