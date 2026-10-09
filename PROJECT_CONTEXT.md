@@ -7,7 +7,7 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 ## Modes
 
 - **Campaign:** Easy / Normal / Hard. Clear `n = 20` successful matches (`CLEARS_TO_WIN`). Three stars: clear the level; finish within the level time (Easy 60s / Normal 90s / Hard 120s); use **at most one** hint. Easy is a tutorial with a fixed opening board; later levels need ≥1 star on the previous card.
-- **Challenge:** `GalaxyImagesByLevel/Challange` (real folder spelling). Score + countdown, +3s per clear. Unlocks at 9 stars. Optional PNG result download. Start modal explains score, +3s, and 10s hint refill.
+- **Challenge:** `GalaxyImagesByLevel/Challange` (real folder spelling). Score + countdown, +3s per clear. Unlocks at 9 stars. Optional PNG result download. Start modal explains score, +3s, and +1 hint per 10 clears.
 
 战役为三关 20 消与三星；简单关带教程；挑战为倒计时，9 星解锁。
 
@@ -28,9 +28,10 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 
 - Match by `classId`; unique `class/filename` unless the catalog is smaller than the board (Easy)
 - Board: 6×4 if unique count < 32, else 8×4
-- Gravity from the top; after settle, if no legal swap remains, reshuffle the whole board (planted move)
+- Gravity from the top; after settle, if no legal swap remains, pause and wait for a center **refresh** button (planted move). Do not auto-reshuffle.
 - Gravity spawns must not instant-match; unused files of the just-cleared class are not dumped back as a stack
-- Hints are **manual** in every mode (button or **H**): 3 charges, cap 3, **+1 every 10s** below the cap. No auto-hint.
+- Hints are **manual** (button or **H**). Levels: 3 charges, cap 3, **+1 every 10s**. Challenge: **+1 per 10 clears**, with `n/10` progress; clears at the cap do not count. No auto-hint.
+- Easy tutorial freezes the timer and does not spend/count its guided hint; free play after unlock is normal.
 - Pause is at the top (**Esc**); it does not reset the board or progress
 - Player language: default Chinese, toggle persists (`progress.lang`)
 - Easy tutorial completion persists (`progress.tutorialDone`); skip checkbox appears afterwards, checked by default
@@ -38,4 +39,4 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 
 ## Latest update
 
-[update/2026-10-09-tutorial-bilingual-manual-hints.md](update/2026-10-09-tutorial-bilingual-manual-hints.md)
+[update/2026-10-09-tutorial-timer-challenge-deadlock.md](update/2026-10-09-tutorial-timer-challenge-deadlock.md)

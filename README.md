@@ -12,7 +12,7 @@ Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfo
 2. Optional:
    `python3 -m http.server 43191 --bind 127.0.0.1`
 3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level; finish within **60s / 90s / 120s** (Easy / Normal / Hard); use **at most one** hint. Easy is a tutorial; after the first completion you can skip it (checked by default).
-4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 every 10s. When a run ends, save a result PNG.
+4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 per 10 successful clears. When a run ends, save a result PNG. Levels instead refill +1 every 10s.
 5. Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default Chinese).
 
 `index.html` is a single portable file (inline CSS/JS, JPEG data URIs). Image bytes are not gzipped.

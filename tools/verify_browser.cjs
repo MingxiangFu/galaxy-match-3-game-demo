@@ -198,7 +198,7 @@ async function main() {
         })`);
         if (!intro.brief) throw new Error("intro modal missing");
         if (!intro.clears.includes("0 / 20")) throw new Error("intro should show 0 / 20");
-        if (!intro.stars.includes("通关本关") || !intro.stars.includes("60") || !intro.stars.includes("提示不超过 1")) {
+        if (!intro.stars.includes("通关本关") || !intro.stars.includes("60") || !intro.stars.includes("提示不超过 1") || !intro.stars.includes("10 秒")) {
             throw new Error("intro missing Easy star conditions " + intro.stars);
         }
         if (!intro.skipHidden) throw new Error("first run must not offer skip tutorial");
@@ -224,6 +224,57 @@ async function main() {
         if (tutorialLock.hintHidden) throw new Error("hint button should be visible in campaign");
         if (tutorialLock.off < 1) throw new Error("non-taught tiles should be dimmed");
         report.push("tutorial: class step locks other tiles, Next goes to swap, hint button visible");
+
+        const tutorFreeze = await cdp.eval(`(function () {
+            const startTime = elapsedSec;
+            const startCharges = hintCharges;
+            const startUses = hintUses;
+            for (let i = 0; i < 5; i++) tickPlayClock();
+            const afterTicks = { elapsed: elapsedSec, charges: hintCharges, uses: hintUses };
+            setTutorialStep("hint");
+            dismissHint();
+            useHint();
+            return {
+                startTime: startTime,
+                afterTicks: afterTicks,
+                charges: hintCharges,
+                uses: hintUses,
+                hints: document.querySelectorAll("#board .cell.hint").length,
+                startCharges: startCharges,
+                startUses: startUses
+            };
+        })()`);
+        if (tutorFreeze.afterTicks.elapsed !== tutorFreeze.startTime) {
+            throw new Error("tutorial clock should stay flat " + JSON.stringify(tutorFreeze));
+        }
+        if (tutorFreeze.charges !== tutorFreeze.startCharges || tutorFreeze.uses !== tutorFreeze.startUses) {
+            throw new Error("tutorial hint should not spend a charge or count " + JSON.stringify(tutorFreeze));
+        }
+        if (tutorFreeze.hints < 2) throw new Error("tutorial hint should still highlight a pair");
+        const afterUnlock = await cdp.eval(`(function () {
+            dismissHint();
+            completeTutorial();
+            elapsedSec = 0;
+            tickPlayClock();
+            const elapsed = elapsedSec;
+            const chargesBefore = hintCharges;
+            const usesBefore = hintUses;
+            useHint();
+            return {
+                elapsed: elapsed,
+                chargesBefore: chargesBefore,
+                charges: hintCharges,
+                usesBefore: usesBefore,
+                uses: hintUses
+            };
+        })()`);
+        if (afterUnlock.elapsed !== 1) {
+            throw new Error("timer should run after tutorial unlock " + JSON.stringify(afterUnlock));
+        }
+        if (afterUnlock.charges !== afterUnlock.chargesBefore - 1 || afterUnlock.uses !== afterUnlock.usesBefore + 1) {
+            throw new Error("hints should spend after unlock " + JSON.stringify(afterUnlock));
+        }
+        report.push("tutorial: timer frozen and hint free; unlock starts the clock and spends hints");
 
         const spawnLoop = await cdp.eval(`(function () {
             const stacks = [];
@@ -258,6 +309,9 @@ async function main() {
         report.push("vertical clear: 12 refills did not drop three identical classes");
 
         const deadlock = await cdp.eval(`(function () {
+            tutorialActive = false;
+            tutorialStep = null;
+            paintTutorialLocks();
             clearsDone = 4;
             elapsedSec = 9;
             score = 70;
@@ -294,51 +348,80 @@ async function main() {
                 });
                 const did = ensurePlayableBoard(true);
                 findValidSwaps = orig;
-                const afterIds = board.map(function (row) {
+                const waitIds = board.map(function (row) {
                     return row.map(function (t) { return t && t.id; });
                 });
+                const refreshed = refreshDeadBoard();
                 return {
                     dead: "forced-no-swap",
                     did: did,
+                    waited: deadlocked === false,
+                    overlayWait: true,
+                    waitChanged: JSON.stringify(beforeIds) !== JSON.stringify(waitIds),
+                    refreshed: refreshed,
                     swaps: findValidSwaps().length,
                     matches: findMatches().length,
-                    msg: document.getElementById("message").textContent,
+                    copy: document.getElementById("deadlockCopy").textContent,
+                    overlay: !document.getElementById("deadlockMask").classList.contains("hidden"),
                     clears: clearsDone,
                     elapsed: elapsedSec,
                     score: score,
                     charges: hintCharges,
-                    changed: JSON.stringify(beforeIds) !== JSON.stringify(afterIds)
+                    changed: JSON.stringify(waitIds) !== JSON.stringify(board.map(function (row) {
+                        return row.map(function (t) { return t && t.id; });
+                    }))
                 };
             }
             const beforeIds = board.map(function (row) {
                 return row.map(function (t) { return t && t.id; });
             });
             const did = ensurePlayableBoard(true);
-            const afterIds = board.map(function (row) {
-                return row.map(function (t) { return t && t.id; });
-            });
+            const wait = {
+                deadlocked: deadlocked,
+                overlay: !document.getElementById("deadlockMask").classList.contains("hidden"),
+                copy: document.getElementById("deadlockCopy").textContent,
+                swaps: findValidSwaps().length,
+                changed: JSON.stringify(beforeIds) !== JSON.stringify(board.map(function (row) {
+                    return row.map(function (t) { return t && t.id; });
+                }))
+            };
+            const refreshed = refreshDeadBoard();
             return {
                 dead: true,
                 did: did,
+                wait: wait,
+                refreshed: refreshed,
                 swaps: findValidSwaps().length,
                 matches: findMatches().length,
-                msg: document.getElementById("message").textContent,
+                copy: wait.copy,
+                overlay: !document.getElementById("deadlockMask").classList.contains("hidden"),
                 clears: clearsDone,
                 elapsed: elapsedSec,
                 score: score,
                 charges: hintCharges,
-                changed: JSON.stringify(beforeIds) !== JSON.stringify(afterIds)
+                changed: JSON.stringify(beforeIds) !== JSON.stringify(board.map(function (row) {
+                    return row.map(function (t) { return t && t.id; });
+                })),
+                waitChanged: wait.changed
             };
         })()`);
-        if (!deadlock.did || deadlock.swaps < 1 || deadlock.matches) {
-            throw new Error("dead board did not reshuffle into a playable board " + JSON.stringify(deadlock));
+        const waitChanged = deadlock.waitChanged;
+        const waitCopy = deadlock.wait ? deadlock.wait.copy : deadlock.copy;
+        if (!deadlock.did) throw new Error("dead board should enter the wait overlay " + JSON.stringify(deadlock));
+        if (waitChanged) throw new Error("dead board must not reshuffle before the button " + JSON.stringify(deadlock));
+        if (deadlock.wait && deadlock.wait.swaps !== 0) throw new Error("wait state still had a swap");
+        if (!String(waitCopy).includes("没有可消除") || !String(waitCopy).includes("暂停")) {
+            throw new Error("deadlock copy missing " + waitCopy);
         }
-        if (!deadlock.msg.includes("重新排列")) throw new Error("reshuffle notice missing");
+        if (!deadlock.refreshed || deadlock.swaps < 1 || deadlock.matches) {
+            throw new Error("center button should reshuffle into a playable board " + JSON.stringify(deadlock));
+        }
+        if (deadlock.overlay) throw new Error("deadlock overlay should hide after refresh");
         if (deadlock.clears !== 4 || deadlock.elapsed !== 9 || deadlock.score !== 70 || deadlock.charges !== 2) {
             throw new Error("reshuffle reset progress " + JSON.stringify(deadlock));
         }
-        if (!deadlock.changed) throw new Error("reshuffle did not change the board");
-        report.push("deadlock reshuffle: Easy 6x4 gained a swap, progress unchanged (" + deadlock.dead + ")");
+        if (!deadlock.changed) throw new Error("refresh did not change the board");
+        report.push("deadlock waits for the center button, then plants a move; progress unchanged (" + deadlock.dead + ")");
 
         const noShuffle = await cdp.eval(`(function () {
             if (!findValidSwaps().length) reshuffleBoardPlanted();
@@ -546,8 +629,8 @@ async function main() {
         if (ch.mode !== "challenge") throw new Error("not in challenge mode");
         if (ch.folder !== 105) throw new Error("Challenge catalog should be 105 images, got " + ch.folder);
         if (!ch.brief) throw new Error("Challenge should open with a start modal");
-        if (!ch.lead.includes("3") || !ch.lead.includes("10") || !ch.lead.includes("+")) {
-            throw new Error("Challenge start modal should explain score, +3s, and 10s hint refill: " + ch.lead);
+        if (!ch.lead.includes("3") || !ch.lead.includes("10") || !ch.lead.includes("+") || ch.lead.includes("10 秒")) {
+            throw new Error("Challenge start modal should explain score, +3s, and +1 per 10 clears: " + ch.lead);
         }
         report.push("Challenge: 8x4 board, Challange catalog 105 images, start modal");
 
@@ -578,20 +661,60 @@ async function main() {
         }
         const cap = await cdp.eval(`(function () {
             hintCharges = 3;
+            hintChargeProgress = 0;
+            for (let i = 0; i < 15; i++) grantChallengeHintProgress();
+            const atCap = { charges: hintCharges, progress: hintChargeProgress };
+            hintCharges = 2;
+            hintChargeProgress = 0;
+            for (let i = 0; i < 9; i++) grantChallengeHintProgress();
+            updateHintButton();
+            const nine = {
+                charges: hintCharges,
+                progress: hintChargeProgress,
+                label: document.getElementById("hintBtn").textContent
+            };
+            grantChallengeHintProgress();
+            const timed = { charges: hintCharges, refill: hintRefillSec };
             hintRefillSec = 0;
-            for (let i = 0; i < 15; i++) tickHintRefill();
-            const atCap = { charges: hintCharges, refill: hintRefillSec };
+            for (let i = 0; i < 12; i++) tickHintRefill();
+            return {
+                atCap: atCap,
+                nine: nine,
+                ten: { charges: hintCharges, progress: hintChargeProgress },
+                timedNoOp: hintCharges === timed.charges
+            };
+        })()`);
+        if (cap.atCap.charges !== 3 || cap.atCap.progress !== 0) throw new Error("clears at cap must not count");
+        if (cap.nine.charges !== 2 || cap.nine.progress !== 9 || !cap.nine.label.includes("9/10")) {
+            throw new Error("9 clears below cap should show 9/10 " + JSON.stringify(cap.nine));
+        }
+        if (cap.ten.charges !== 3 || cap.ten.progress !== 0) throw new Error("10 clears below cap should grant +1");
+        if (!cap.timedNoOp) throw new Error("challenge must not use the 10s refill");
+        report.push("challenge hints: +1 per 10 clears, show n/10, cap 3, no 10s refill");
+
+        const levelRefill = await cdp.eval(`(function () {
+            const prev = mode;
+            mode = "campaign";
+            tutorialActive = false;
+            deadlocked = false;
+            paused = false;
+            runEnded = false;
             hintCharges = 2;
             hintRefillSec = 0;
             for (let i = 0; i < 9; i++) tickHintRefill();
             const nine = { charges: hintCharges, refill: hintRefillSec };
             tickHintRefill();
-            return { atCap: atCap, nine: nine, ten: { charges: hintCharges, refill: hintRefillSec } };
+            const ten = { charges: hintCharges, refill: hintRefillSec };
+            mode = prev;
+            return { nine: nine, ten: ten };
         })()`);
-        if (cap.atCap.charges !== 3 || cap.atCap.refill !== 0) throw new Error("ticks at cap must not refill");
-        if (cap.nine.charges !== 2 || cap.nine.refill !== 9) throw new Error("9s below cap should not grant yet");
-        if (cap.ten.charges !== 3 || cap.ten.refill !== 0) throw new Error("10s below cap should grant +1");
-        report.push("hints: manual only, 3 start, +1 every 10s, cap 3");
+        if (levelRefill.nine.charges !== 2 || levelRefill.nine.refill !== 9) {
+            throw new Error("levels should still use 10s refill");
+        }
+        if (levelRefill.ten.charges !== 3 || levelRefill.ten.refill !== 0) {
+            throw new Error("10s below cap should grant +1 on levels");
+        }
+        report.push("levels keep +1 every 10s while below the cap");
 
         await cdp.eval("score = 42; elapsedSec = 17; endChallenge()");
         await sleep(200);

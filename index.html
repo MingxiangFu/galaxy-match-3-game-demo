@@ -246,6 +246,39 @@ body.playing {
     box-shadow: 0 0 0 3px var(--gold), 0 0 16px rgba(251, 191, 36, 0.55);
 }
 
+.board-wrap.deadlocked .board {
+    filter: brightness(0.32) grayscale(0.35);
+    pointer-events: none;
+}
+
+.deadlock-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+    text-align: center;
+    background: rgba(2, 6, 23, 0.28);
+}
+
+.deadlock-mask p {
+    margin: 0;
+    max-width: 28em;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.45;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+}
+
+.deadlock-mask button {
+    min-width: 160px;
+}
+
 #coachNext {
     margin-top: 10px;
 }
@@ -800,6 +833,10 @@ body.playing {
     <div id="playArea" class="hidden">
         <div id="boardWrap" class="board-wrap">
             <div id="board" class="board"></div>
+            <div id="deadlockMask" class="deadlock-mask hidden">
+                <p id="deadlockCopy">没有可消除的一对。游戏已暂停。请点中央按钮刷新棋盘。</p>
+                <button id="deadlockRefreshBtn" class="btn" type="button" onclick="refreshDeadBoard()">刷新棋盘</button>
+            </div>
         </div>
         <div id="legend" class="legend"></div>
         <div class="footer">
@@ -928,6 +965,7 @@ const GAME_TIME = 60;
 const TIME_BONUS = 3;
 const HINT_CHARGE_MAX = 3;
 const HINT_REFILL_SEC = 10;
+const HINT_CLEAR_EVERY = 10;
 const STORAGE_KEY = "galaxyGameDemo.progress.v1";
 const CHALLENGE_FOLDER = "Challange";
 
@@ -955,7 +993,7 @@ const I18N = {
         hardCopy: "同类照片更多、形态更杂。棋盘更大，需要更仔细辨认细微差别。",
         lockPrev: "通关上一关后解锁",
         challengeTitle: "挑战模式",
-        challengeCopy: "使用 Challange 图库。每次消除计分，并为倒计时 +{bonus} 秒。提示开局 3 次，最多 3 次，每 10 秒恢复 1 次。集齐 9 星后解锁。",
+        challengeCopy: "使用 Challange 图库。每次消除计分，并为倒计时 +{bonus} 秒。提示开局 3 次，最多 3 次，每 10 次成功消除恢复 1 次。集齐 9 星后解锁。",
         lockNine: "集齐 9 星后解锁，或使用下方控制台立即开放",
         starsOfNine: "{n} / 9 星",
         bestNone: "尚未通关",
@@ -976,7 +1014,12 @@ const I18N = {
         msgNoHintCharges: "没有提示次数了",
         msgHintOn: "已经高亮了一对可消除的格子",
         msgNoHintSwap: "当前没有可提示的交换",
-        msgReshuffle: "没有可消除的交换，已重新排列棋盘",
+        msgReshuffle: "棋盘已刷新，现在有可消除的交换",
+        deadlockCopy: "没有可消除的一对。游戏已暂停。请点中央按钮刷新棋盘。",
+        deadlockRefresh: "刷新棋盘",
+        hintTimedRefill: "低于上限时每 10 秒恢复 1 次",
+        hintClearProgress: "每 10 次消除 +1（{n}/{every}）",
+        hintClearFull: "已达上限，满次数时不累计消除",
         msgCleared: "成功消除 {n} / {goal}",
         msgChallengeClear: "消除了 {n} 个{name}  +{bonus}s",
         msgChallengeCombo: "{combo} 连消！+{points} 分  +{bonus}s",
@@ -1003,7 +1046,7 @@ const I18N = {
         savePng: "保存成绩图",
         anotherRound: "再来一局",
         challengeEnterTitle: "挑战模式",
-        challengeEnterLead: "与关卡不同：每次消除计分；每次消除为倒计时 +{bonus} 秒；提示开局 3 次、最多 3 次，低于上限时每 10 秒恢复 1 次。时间到 0 结束。",
+        challengeEnterLead: "与关卡不同：每次消除计分；每次消除为倒计时 +{bonus} 秒；提示开局 3 次、最多 3 次，每 10 次成功消除恢复 1 次（满次数时不累计）。时间到 0 结束。",
         challengePauseLead: "倒计时已暂停。继续后仍从剩余时间开始。",
         hintChargesLine: "提示次数 {n} / {max}",
         timeBonusTag: "每次消除 +{bonus}s",
@@ -1021,14 +1064,14 @@ const I18N = {
         tutorPauseKicker: "教程 · 暂停",
         tutorPause: "点右上角「暂停」或按 Esc。暂停不会重置棋盘或进度。弹窗里的三颗星会说明评分：通关、限时、提示不超过 1 次。",
         tutorHintKicker: "教程 · 提示",
-        tutorHint: "点「提示」或按 H，会高亮一对可消除的格子并消耗 1 次。教程会用这一次；第二次提示将失去第 3 颗星。",
+        tutorHint: "点「提示」或按 H，会高亮一对可消除的格子。教程中的这一次不消耗次数，也不计入第三星。",
         tutorHintSwapKicker: "教程 · 按提示交换",
         tutorHintSwap: "现在交换高亮的两个格子，完成这次提示消除。",
         tutorDoneKicker: "教程完成",
-        tutorDone: "棋盘已解锁。继续消除，凑满 20 次即可通关。暂停（Esc）与提示（H）随时可用。",
+        tutorDone: "棋盘已解锁，计时开始。继续消除，凑满 20 次即可通关。之后的提示会消耗次数；超过 1 次将失去第 3 颗星。",
         playSubtitle: "{n} 类 · {images} 张不重复图 · {cols}×{rows} 棋盘",
         campaignLesson: "{copy} 同一形态类连成三个即可消除。成功消除 {n} 次通关。",
-        challengeLesson: "最大图库。同类三消得分，并获得 +{bonus}s。点「提示」或按 H 高亮一对；开局 3 次，低于上限时每 10 秒 +1，最多 3 次。",
+        challengeLesson: "最大图库。同类三消得分，并获得 +{bonus}s。点「提示」或按 H 高亮一对；开局 3 次，每 10 次成功消除 +1，最多 3 次。",
         loadingTitle: "正在载入星系图库…",
         loadingDetail: "正在载入嵌入的星系图像。",
         pngBrand: "星系分类消消乐",
@@ -1052,7 +1095,7 @@ const I18N = {
         hardCopy: "More photos and messier shapes. The board is larger, so look more carefully.",
         lockPrev: "Clear the previous level to unlock",
         challengeTitle: "Challenge",
-        challengeCopy: "Uses the Challange catalog. Each clear scores and adds {bonus}s to the countdown. Hints start at 3, cap at 3, and refill +1 every 10s. Unlocks at 9 stars.",
+        challengeCopy: "Uses the Challange catalog. Each clear scores and adds {bonus}s to the countdown. Hints start at 3, cap at 3, and refill +1 per 10 successful clears. Unlocks at 9 stars.",
         lockNine: "Collect 9 stars to unlock, or use the console below",
         starsOfNine: "{n} / 9 stars",
         bestNone: "Not cleared yet",
@@ -1073,7 +1116,12 @@ const I18N = {
         msgNoHintCharges: "No hint charges left",
         msgHintOn: "A matchable pair is already highlighted",
         msgNoHintSwap: "No hintable swap right now",
-        msgReshuffle: "No valid swap left; the board was reshuffled",
+        msgReshuffle: "The board was refreshed and now has a matchable swap",
+        deadlockCopy: "No removable pair. The game is paused. Press the button in the center to refresh.",
+        deadlockRefresh: "Refresh board",
+        hintTimedRefill: "+1 every 10s while below the cap",
+        hintClearProgress: "+1 per 10 clears ({n}/{every})",
+        hintClearFull: "At cap; clears do not count until a charge is spent",
         msgCleared: "Clears {n} / {goal}",
         msgChallengeClear: "Cleared {n} {name}  +{bonus}s",
         msgChallengeCombo: "{combo} combo! +{points}  +{bonus}s",
@@ -1100,7 +1148,7 @@ const I18N = {
         savePng: "Save result image",
         anotherRound: "Play again",
         challengeEnterTitle: "Challenge",
-        challengeEnterLead: "Unlike levels: each clear scores; each clear adds {bonus}s to the timer; hints start at 3, cap at 3, and refill +1 every 10s while below the cap. The run ends at 0.",
+        challengeEnterLead: "Unlike levels: each clear scores; each clear adds {bonus}s to the timer; hints start at 3, cap at 3, and refill +1 per 10 successful clears (clears at the cap do not count). The run ends at 0.",
         challengePauseLead: "The countdown is paused. Continue keeps the remaining time.",
         hintChargesLine: "Hints {n} / {max}",
         timeBonusTag: "+{bonus}s per clear",
@@ -1118,14 +1166,14 @@ const I18N = {
         tutorPauseKicker: "Tutorial · Pause",
         tutorPause: "Tap Pause at the top right, or press Esc. Pause does not reset the board. The modal lists the three stars: clear, time limit, and at most 1 hint.",
         tutorHintKicker: "Tutorial · Hint",
-        tutorHint: "Tap Hint or press H to highlight a matchable pair. That spends 1 charge. The tutorial uses this once; a second hint forfeits star 3.",
+        tutorHint: "Tap Hint or press H to highlight a matchable pair. This tutorial hint does not spend a charge and does not count toward star 3.",
         tutorHintSwapKicker: "Tutorial · Swap the hint",
         tutorHintSwap: "Now swap the highlighted pair to finish this hinted clear.",
         tutorDoneKicker: "Tutorial complete",
-        tutorDone: "The board is unlocked. Keep clearing until you reach 20. Pause (Esc) and Hint (H) stay available.",
+        tutorDone: "The board is unlocked and the timer starts. Keep clearing until you reach 20. Hints now spend charges; more than 1 hint forfeits star 3.",
         playSubtitle: "{n} classes · {images} unique images · {cols}×{rows} board",
         campaignLesson: "{copy} Match three of a class. Clear {n} times to finish.",
-        challengeLesson: "Largest catalog. Matching three scores and grants +{bonus}s. Tap Hint or press H; start with 3, refill +1 every 10s below the cap of 3.",
+        challengeLesson: "Largest catalog. Matching three scores and grants +{bonus}s. Tap Hint or press H; start with 3, refill +1 per 10 successful clears, cap 3.",
         loadingTitle: "Loading galaxy catalog…",
         loadingDetail: "Loading the embedded galaxy images.",
         pngBrand: "Galaxy Class Match-3",
@@ -1159,7 +1207,9 @@ let hintPair = null;
 let hintUses = 0;
 let hintCharges = HINT_CHARGE_MAX;
 let hintRefillSec = 0;
+let hintChargeProgress = 0;
 let runEnded = false;
+let deadlocked = false;
 let briefKind = "enter";
 let skipTutorialThisRun = false;
 let tutorialActive = false;
@@ -1305,6 +1355,8 @@ function applyStaticLang() {
     setText("challengeAgainBtn", "anotherRound");
     setText("challengeHomeBtn", "backHome");
     setText("coachNext", "next");
+    setText("deadlockCopy", "deadlockCopy");
+    setText("deadlockRefreshBtn", "deadlockRefresh");
     const langLabel = t("langSwitch");
     const homeLang = document.getElementById("homeLangBtn");
     const playLang = document.getElementById("playLangBtn");
@@ -1328,6 +1380,7 @@ function setLang(next) {
         fillBriefModal(briefKind);
     }
     if (tutorialActive) applyTutorialStep();
+    if (deadlocked) applyDeadlockCopy();
 }
 
 function toggleLang() {
@@ -1821,7 +1874,7 @@ function swapCellContents(a, b) {
 }
 
 function playLocked() {
-    return locked || paused || runEnded || mode === "home";
+    return locked || paused || runEnded || deadlocked || mode === "home";
 }
 
 async function clickCell(r, c) {
@@ -2091,14 +2144,63 @@ function announceReshuffle() {
     }, 600);
 }
 
+function applyDeadlockCopy() {
+    const copy = document.getElementById("deadlockCopy");
+    const btn = document.getElementById("deadlockRefreshBtn");
+    if (copy) copy.textContent = t("deadlockCopy");
+    if (btn) btn.textContent = t("deadlockRefresh");
+}
+
+function hideDeadlock() {
+    deadlocked = false;
+    const wrap = document.getElementById("boardWrap");
+    const mask = document.getElementById("deadlockMask");
+    if (wrap) wrap.classList.remove("deadlocked");
+    if (mask) mask.classList.add("hidden");
+}
+
+function enterDeadlock() {
+    if (runEnded) return false;
+    deadlocked = true;
+    selected = null;
+    refreshSelection();
+    dismissHint();
+    stopClocks();
+    const wrap = document.getElementById("boardWrap");
+    const mask = document.getElementById("deadlockMask");
+    if (wrap) wrap.classList.add("deadlocked");
+    if (mask) mask.classList.remove("hidden");
+    applyDeadlockCopy();
+    updateHintButton();
+    return true;
+}
+
 function ensurePlayableBoard(announce) {
     if (findMatches().length) return false;
     if (findValidSwaps().length) return false;
+    if (announce) {
+        enterDeadlock();
+        return true;
+    }
     if (!reshuffleBoardPlanted()) return false;
     selected = null;
     dismissHint();
     paintFullBoard();
-    if (announce) announceReshuffle();
+    return true;
+}
+
+function refreshDeadBoard() {
+    if (!deadlocked || runEnded) return false;
+    if (!reshuffleBoardPlanted()) return false;
+    selected = null;
+    dismissHint();
+    paintFullBoard();
+    hideDeadlock();
+    announceReshuffle();
+    if (tutorialActive) paintTutorialLocks();
+    if (!paused && !overlayOpen()) startPlayClock();
+    updateHintButton();
+    fitPlayLayout();
     return true;
 }
 
@@ -2112,7 +2214,7 @@ function applyHintClasses() {
 }
 
 function revealHintPair() {
-    if (hintPair || runEnded || paused) return false;
+    if (hintPair || runEnded || paused || deadlocked) return false;
     if (mode === "challenge" && timeLeft <= 0) return false;
     const pairs = findValidSwaps();
     if (!pairs.length) return false;
@@ -2122,8 +2224,12 @@ function revealHintPair() {
     return true;
 }
 
+function tutorialHintIsFree() {
+    return tutorialActive && tutorialStep === "hint";
+}
+
 function hintAllowed() {
-    if (mode === "home" || paused || runEnded || locked || overlayOpen()) return false;
+    if (mode === "home" || paused || runEnded || locked || deadlocked || overlayOpen()) return false;
     if (tutorialActive && tutorialStep !== "hint" && tutorialStep !== "done") return false;
     return true;
 }
@@ -2132,11 +2238,18 @@ function updateHintButton() {
     const btn = document.getElementById("hintBtn");
     if (!btn) return;
     btn.classList.remove("hidden");
-    btn.textContent = t("hint") + " " + hintCharges;
-    btn.disabled = !hintAllowed() || hintCharges <= 0;
+    if (mode === "challenge" && hintCharges < HINT_CHARGE_MAX) {
+        btn.textContent = t("hint") + " " + hintCharges + "  " + hintChargeProgress + "/" + HINT_CLEAR_EVERY;
+    } else {
+        btn.textContent = t("hint") + " " + hintCharges;
+    }
+    const needCharge = !tutorialHintIsFree();
+    btn.disabled = !hintAllowed() || (needCharge && hintCharges <= 0);
 }
 
 function tickHintRefill() {
+    if (mode === "challenge") return;
+    if (tutorialActive || deadlocked || paused || runEnded) return;
     if (hintCharges >= HINT_CHARGE_MAX) {
         hintRefillSec = 0;
         return;
@@ -2149,9 +2262,21 @@ function tickHintRefill() {
     }
 }
 
+function grantChallengeHintProgress() {
+    if (mode !== "challenge") return;
+    if (hintCharges >= HINT_CHARGE_MAX) return;
+    hintChargeProgress += 1;
+    if (hintChargeProgress >= HINT_CLEAR_EVERY) {
+        hintCharges = Math.min(HINT_CHARGE_MAX, hintCharges + 1);
+        hintChargeProgress = 0;
+    }
+    updateHintButton();
+}
+
 function useHint() {
     if (!hintAllowed()) return;
-    if (hintCharges <= 0) {
+    const freeTutorial = tutorialHintIsFree();
+    if (!freeTutorial && hintCharges <= 0) {
         document.getElementById("message").textContent = t("msgNoHintCharges");
         return;
     }
@@ -2163,8 +2288,10 @@ function useHint() {
         document.getElementById("message").textContent = t("msgNoHintSwap");
         return;
     }
-    hintCharges -= 1;
-    hintUses += 1;
+    if (!freeTutorial) {
+        hintCharges -= 1;
+        hintUses += 1;
+    }
     updateHintButton();
     if (tutorialActive && tutorialStep === "hint") setTutorialStep("hintswap");
 }
@@ -2387,6 +2514,7 @@ async function clearMatches() {
         addScore(baseScore + comboBonus);
         addTimeBonus();
         clearsDone += 1;
+        grantChallengeHintProgress();
         updateHud();
         pulseScore();
 
@@ -2557,6 +2685,7 @@ function hideOverlays() {
     document.getElementById("briefOverlay").classList.remove("show");
     document.getElementById("winOverlay").classList.remove("show");
     document.getElementById("challengeOverlay").classList.remove("show");
+    hideDeadlock();
 }
 
 function stopClocks() {
@@ -2624,9 +2753,14 @@ function fillBriefModal(kind) {
         document.getElementById("briefClears").textContent = String(score);
         document.getElementById("briefElapsed").textContent =
             kind === "pause" ? t("remaining", { n: timeLeft }) : timeLeft + "s";
+        const refillNote = hintCharges >= HINT_CHARGE_MAX
+            ? t("hintClearFull")
+            : t("hintClearProgress", { n: hintChargeProgress, every: HINT_CLEAR_EVERY });
         document.getElementById("briefStars").innerHTML =
             "<li><span>" + t("hintChargesLine", { n: hintCharges, max: HINT_CHARGE_MAX }) +
-            "</span><span class=\"tag\">" + t("timeBonusTag", { bonus: TIME_BONUS }) + "</span></li>";
+            "</span><span class=\"tag\">" + t("timeBonusTag", { bonus: TIME_BONUS }) + "</span></li>" +
+            "<li><span>" + refillNote + "</span><span class=\"tag\">" +
+            hintChargeProgress + "/" + HINT_CLEAR_EVERY + "</span></li>";
         return;
     }
 
@@ -2639,7 +2773,9 @@ function fillBriefModal(kind) {
     document.getElementById("briefStars").innerHTML = campaignStarItems().map(function (item) {
         const cls = item.lost ? "lost" : "";
         return "<li class=\"" + cls + "\"><span>★ " + item.label + "</span><span class=\"tag\">" + item.note + "</span></li>";
-    }).join("");
+    }).join("") +
+        "<li><span>" + t("hintChargesLine", { n: hintCharges, max: HINT_CHARGE_MAX }) +
+        "</span><span class=\"tag\">" + t("hintTimedRefill") + "</span></li>";
 }
 
 function showBrief(kind) {
@@ -2686,30 +2822,34 @@ function resumeFromBrief() {
         setTutorialStep("hint");
     }
 
-    startPlayClock();
+    if (!deadlocked) startPlayClock();
     updateHintButton();
     fitPlayLayout();
 }
 
+function tickPlayClock() {
+    if (paused || runEnded || deadlocked) return;
+    if (tutorialActive) return;
+    tickHintRefill();
+    if (mode === "challenge") {
+        timeLeft -= 1;
+        elapsedSec += 1;
+        if (timeLeft <= 0) {
+            timeLeft = 0;
+            updateHud();
+            endChallenge();
+            return;
+        }
+    } else {
+        elapsedSec += 1;
+    }
+    updateHud();
+}
+
 function startPlayClock() {
     stopClocks();
-    timer = setInterval(function () {
-        if (paused || runEnded) return;
-        tickHintRefill();
-        if (mode === "challenge") {
-            timeLeft -= 1;
-            elapsedSec += 1;
-            if (timeLeft <= 0) {
-                timeLeft = 0;
-                updateHud();
-                endChallenge();
-                return;
-            }
-        } else {
-            elapsedSec += 1;
-        }
-        updateHud();
-    }, 1000);
+    if (deadlocked || paused || runEnded) return;
+    timer = setInterval(tickPlayClock, 1000);
 }
 
 function catalogFor(folder) {
@@ -2719,6 +2859,7 @@ function catalogFor(folder) {
 
 function prepareBoard(opts) {
     const useTutorial = !!(opts && opts.tutorial);
+    hideDeadlock();
     selected = null;
     locked = false;
     imageErrors = 0;
@@ -2804,6 +2945,7 @@ function goHome() {
     tutorialActive = false;
     tutorialStep = null;
     stopClocks();
+    hideDeadlock();
     hideOverlays();
     document.body.classList.remove("playing");
     document.getElementById("gameShell").classList.add("hidden");
@@ -2816,6 +2958,7 @@ function resetRunHints() {
     hintUses = 0;
     hintCharges = HINT_CHARGE_MAX;
     hintRefillSec = 0;
+    hintChargeProgress = 0;
     dismissHint();
 }
 
