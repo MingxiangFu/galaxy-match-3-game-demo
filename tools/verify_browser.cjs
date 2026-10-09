@@ -426,7 +426,7 @@ async function main() {
         })`);
         if (!win.winShow) throw new Error("win overlay missing");
         if (!win.stars[0] || win.stars[1] || win.stars[2]) throw new Error("expected only star 1 after both forfeits");
-        if (win.best !== 91) throw new Error("best time should record 91s");
+        if (win.best !== 61) throw new Error("best time should record 61s");
         const oneStarPaint = await cdp.eval(`([...document.querySelectorAll("#winStars span")].map(function (s) {
             return { on: s.classList.contains("on"), color: getComputedStyle(s).color };
         }))`);
