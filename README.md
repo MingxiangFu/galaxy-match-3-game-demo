@@ -1,8 +1,7 @@
 # v1.0 五类分级教学
 
-**Five-class levels.** Galaxy classification match-3. Repo: [galaxy-match-3-game-demo](https://github.com/MingxiangFu/galaxy-match-3-game-demo/). v1.0 is the update still being uploaded; the remote may not contain these files yet.
-
-v1.0 五类分级教学。仓库见上；这次更新仍在手动上传，远程可能还没有这些文件。
+**Five-class levels.** Galaxy classification match-3. 
+v1.0 五类分级教学。
 
 Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder), not identical pixels. Home selects Easy / Normal / Hard; Challenge uses the `Challange` folder after 9 stars. The player UI is bilingual (zh/en).
 
@@ -27,9 +26,9 @@ The image set is distributed as `GalaxyImagesByLevel.zip` in this project/repo. 
 4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 per 10 successful clears. When a run ends, save a result PNG. Levels instead refill +1 every 10s.
 5. Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default Chinese).
 
-`index.html` is a single portable file (inline CSS/JS, JPEG data URIs). Image bytes are not gzipped.
+`index.html` is a single portable file (inline CSS/JS, JPEG data URIs).
 
-`index.html` 可单独打开；图像以 JPEG 的 data URI 嵌入，未做 gzip。
+`index.html` 可单独打开；图像以 JPEG 的 data URI 嵌入。
 
 Progress lives in `localStorage` (`galaxyGameDemo.progress.v1`). The home console can reset all progress or unlock Challenge immediately.
 
@@ -56,7 +55,5 @@ Same thing, without the wrapper: `python3 tools/build_index.py`. Both rewrite `i
 
 - **Distributed as:** `GalaxyImagesByLevel.zip` (unzip in the project root; see **Dataset zip** above).
 - **Folder after unzip:** `GalaxyImagesByLevel/` — five classes (FaceOnSpirals, EdgeOnDisk, Irregular, Elliptical, Group / 星系团). Challenge folder spelling is `Challange`.
-- **Not used by the current build:** `GalaxyImages4Class/`
-- **Not included in spirit of the portable demo:** original `GalaxyImages/` (~6000 images), gitignored.
 
-包含分关小目录；原始约 6000 张的 `GalaxyImages/` 不进入便携页面来源。
+包含分关小目录。
