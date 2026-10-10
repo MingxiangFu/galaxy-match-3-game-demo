@@ -1,7 +1,6 @@
-# v1.0 五类分级教学
+# v1.0 五类分级星系形态三消
 
 **Five-class levels.** Galaxy classification match-3. 
-v1.0 五类分级教学。
 
 Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder), not identical pixels. Home selects Easy / Normal / Hard; Challenge uses the `Challange` folder after 9 stars. The player UI is bilingual (zh/en).
 
