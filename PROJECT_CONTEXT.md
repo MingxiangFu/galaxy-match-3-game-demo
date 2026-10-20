@@ -31,13 +31,13 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - Gravity from the top; after settle, if no legal swap remains, pause and wait for a center **refresh** button (planted move). Do not auto-reshuffle.
 - Gravity spawns must not instant-match; unused files of the just-cleared class are not dumped back as a stack
 - Hints are **manual** (button or **H**). Levels: 3 charges, cap 3, **+1 every 10s**. Challenge: **+1 per 10 clears**, with `n/10` progress; clears at the cap do not count. No auto-hint. After 15s without a successful clear or 5 failed swaps, only the hint **button** is highlighted.
-- Easy tutorial freezes the timer and does not spend/count hints. After the first completion, the ask overlay defaults to skip.
+- Easy tutorial freezes the timer and does not spend/count hints. After the first completion, the ask overlay defaults to skip. 上一步 restores that page’s board snapshot. A shared power-use page sits before the five effects. The board overlay is light; non-target tiles stay not clickable.
 - Swap animation: Fast (default) or Slow (tiles slide, then shatter or slide back). Persisted as `progress.animSpeed`.
-- Class row is five power-ups. Charge cost is 5 successful clears of that class. Row/single power clears do not score, count, or charge. Rotate/shuffle score only if they create a normal 3-match.
+- Class row is five power-ups. Charge cost is 5 successful clears of that class. A red/green `n`-cell meter sits beside `x/5`. Row/single power clears do not score, count, or charge. Rotate/shuffle score only if they create a normal 3-match.
 - Pause is at the top (**Esc**); it does not reset the board or progress
 - Player language: default Chinese, toggle persists (`progress.lang`)
 - Progress: `localStorage` key `galaxyGameDemo.progress.v1`
 
 ## Latest update
 
-[update/2026-10-20-slow-anim-tutorial-powers.md](update/2026-10-20-slow-anim-tutorial-powers.md)
+[update/2026-10-20-tutorial-rewind-charge-bar.md](update/2026-10-20-tutorial-rewind-charge-bar.md)

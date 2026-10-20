@@ -225,13 +225,11 @@ async function main() {
         if (intro.brief) throw new Error("Yes should skip the normal intro and start the guided tutorial");
         if (!intro.tutorial || intro.step !== "class") throw new Error("Yes should start on the class page");
         if (!intro.mask || !intro.bar) throw new Error("tutorial should show a mask and bottom bar");
-        if (!String(intro.page).replace(/\s/g, "").includes("1/" + "13") && intro.page.replace(/\s/g, "") !== "1/13") {
-            if (intro.page.replace(/\s/g, "") !== "1/13") throw new Error("page indicator should be 1 / 13, got " + intro.page);
-        }
+        if (intro.page.replace(/\s/g, "") !== "1/14") throw new Error("page indicator should be 1 / 14, got " + intro.page);
         if (!intro.prevDisabled) throw new Error("Back should be disabled on page 1");
         if (!intro.callout.includes("<u>") || !intro.skipHidden) throw new Error("callout should underline key words");
         if (intro.cols !== 6 || intro.rows !== 4 || intro.cells !== 24) throw new Error("Easy board should be 6x4");
-        report.push("tutorial Yes: mask, 1/13, Back disabled, 6x4 board, no intro modal");
+        report.push("tutorial Yes: mask, 1/14, Back disabled, 6x4 board, no intro modal");
 
         const tutorialLock = await cdp.eval(`(async function () {
             const step0 = tutorialStep;
@@ -251,16 +249,27 @@ async function main() {
         if (tutorialLock.pages.indexOf("hint") < 0 || tutorialLock.pages[tutorialLock.pages.indexOf("hint") + 1] !== "stars") {
             throw new Error("star page must follow the hint page " + JSON.stringify(tutorialLock.pages));
         }
-        report.push("tutorial: class step locks other tiles, Next goes to swap, stars after hint");
+        if (tutorialLock.pages[tutorialLock.pages.indexOf("stars") + 1] !== "powerUse" ||
+            tutorialLock.pages[tutorialLock.pages.indexOf("powerUse") + 1] !== "powerFace") {
+            throw new Error("shared power-use page must sit before the five effects " + JSON.stringify(tutorialLock.pages));
+        }
+        report.push("tutorial: class step locks other tiles, Next goes to swap, stars after hint, usage before powers");
 
         const guided = await cdp.eval(`(function () {
             setTutorialPageById("hint");
+            const hintCopy = document.getElementById("tutorCallout").innerHTML;
+            const hole = document.getElementById("tutorHole");
             tutorialNext();
             const stars = {
                 step: tutorialStep,
                 brief: document.getElementById("briefOverlay").classList.contains("show"),
-                copy: document.getElementById("tutorCallout").innerHTML
+                copy: document.getElementById("tutorCallout").innerHTML,
+                hintCopy: hintCopy,
+                boardLight: hole.classList.contains("board-light")
             };
+            setTutorialPageById("swap");
+            const swapHole = document.getElementById("tutorHole");
+            stars.swapLight = swapHole.classList.contains("board-light");
             setTutorialPageById("finish");
             const endBtn = document.querySelector("#tutorCallout .tutor-end");
             const nextBtn = document.getElementById("tutorNextBtn");
@@ -281,10 +290,88 @@ async function main() {
         if (!guided.stars.copy.includes("9") || !guided.stars.copy.includes("<u>")) {
             throw new Error("star page should explain 9 stars with underlined keywords " + guided.stars.copy);
         }
+        if (!guided.stars.hintCopy.includes("10") || !guided.stars.hintCopy.includes("3") ||
+            !(guided.stars.hintCopy.includes("秒") || guided.stars.hintCopy.toLowerCase().includes("10s")) ||
+            !(guided.stars.hintCopy.includes("成功消除") || guided.stars.hintCopy.toLowerCase().includes("successful"))) {
+            throw new Error("hint page should state both refill rules " + guided.stars.hintCopy);
+        }
+        if (!guided.stars.swapLight) throw new Error("board tutorial pages should use a lighter board mask");
         if (!guided.finish.hasEnd || guided.finish.endText !== "结束教程" || guided.finish.nextText !== "下一步" || !guided.finish.nextDisabled || guided.finish.sameParent) {
             throw new Error("End tutorial must sit apart from Next " + JSON.stringify(guided.finish));
         }
         report.push("tutorial: star page after hint; End tutorial is not in the Next slot");
+
+        const rewind = await cdp.eval(`(async function () {
+            animSpeed = "fast";
+            hintCharges = 3;
+            elapsedSec = 4;
+            setTutorialPageById("swap");
+            const before = board.map(function (row) {
+                return row.map(function (tile) { return tile && tile.id; });
+            });
+            await clickCell(tutorialSwapCellA.r, tutorialSwapCellA.c);
+            await clickCell(tutorialSwapCellB.r, tutorialSwapCellB.c);
+            const afterClear = {
+                step: tutorialStep,
+                changed: JSON.stringify(before) !== JSON.stringify(board.map(function (row) {
+                    return row.map(function (tile) { return tile && tile.id; });
+                }))
+            };
+            tutorialPrev();
+            await clickCell(3, 5);
+            const blocked = selected;
+            selected = null;
+            refreshSelection();
+            swap(tutorialSwapCellA, tutorialSwapCellB);
+            const hits = findMatches().length;
+            swap(tutorialSwapCellA, tutorialSwapCellB);
+            setTutorialPageById("powerUse");
+            const useCopy = document.getElementById("tutorCallout").innerHTML;
+            powerCharge.FaceOnSpirals = 3;
+            renderLegend();
+            const cells = Array.from(document.querySelectorAll('#legend .legend-item[data-class-id="FaceOnSpirals"] .power-meter i'));
+            const label = document.querySelector('#legend .legend-item[data-class-id="FaceOnSpirals"] .power-charge');
+            setTutorialPageById("swap");
+            return {
+                afterClear: afterClear,
+                restored: JSON.stringify(before) === JSON.stringify(board.map(function (row) {
+                    return row.map(function (tile) { return tile && tile.id; });
+                })),
+                step: tutorialStep,
+                blocked: blocked,
+                hits: hits,
+                charges: hintCharges,
+                elapsed: elapsedSec,
+                useCopy: useCopy,
+                meter: {
+                    n: cells.length,
+                    on: cells.filter(function (el) { return el.classList.contains("on"); }).length,
+                    offRed: cells.filter(function (el) {
+                        return !el.classList.contains("on") && getComputedStyle(el).backgroundColor.indexOf("248") >= 0;
+                    }).length,
+                    onGreen: cells.filter(function (el) {
+                        return el.classList.contains("on") && getComputedStyle(el).backgroundColor.indexOf("74") >= 0;
+                    }).length,
+                    text: label ? label.textContent.replace(/\\s/g, "") : ""
+                }
+            };
+        })()`);
+        if (!rewind.afterClear.changed) throw new Error("guided swap should change the board");
+        if (!rewind.restored || rewind.step !== "swap") {
+            throw new Error("Back should restore the earlier board snapshot " + JSON.stringify(rewind));
+        }
+        if (rewind.blocked) throw new Error("non-target tiles must stay not clickable");
+        if (rewind.hits < 3) throw new Error("restored swap pair should still match");
+        if (rewind.charges !== 3 || rewind.elapsed !== 4) {
+            throw new Error("rewind must not restore timer or spend hint charges " + JSON.stringify(rewind));
+        }
+        if (!rewind.useCopy.includes("5") || !rewind.useCopy.includes("<u>")) {
+            throw new Error("usage page should explain 5-clear charge " + rewind.useCopy);
+        }
+        if (rewind.meter.n !== 5 || rewind.meter.on !== 3 || !String(rewind.meter.text).includes("3/5")) {
+            throw new Error("charge meter should show 3/5 with 3 filled cells " + JSON.stringify(rewind.meter));
+        }
+        report.push("tutorial rewind restores the swap board; usage page before powers; meter 3/5");
 
         const tutorFreeze = await cdp.eval(`(function () {
             const startTime = elapsedSec;

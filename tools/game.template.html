@@ -292,6 +292,10 @@ body.playing {
     box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.58);
 }
 
+.tutor-hole.board-light {
+    box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.18);
+}
+
 .tutor-focus {
     position: relative;
     z-index: 200 !important;
@@ -302,7 +306,7 @@ body.playing {
 .tutor-callout {
     position: fixed;
     z-index: 560;
-    max-width: min(340px, 86vw);
+    max-width: min(420px, 90vw);
     color: #fff;
     font-size: clamp(20px, 3.4vw, 28px);
     font-weight: 900;
@@ -383,15 +387,41 @@ body.playing {
     line-height: 1.3;
 }
 
+.legend-item .power-charge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
 .legend-item .power-charge {
     font-size: 10px;
     font-weight: 800;
     color: var(--accent);
+    white-space: nowrap;
+}
+
+.power-meter {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.power-meter i {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: #f87171;
+}
+
+.power-meter i.on {
+    background: #4ade80;
 }
 
 .cell.tutorial-off {
-    opacity: 0.38;
-    filter: grayscale(0.35) brightness(0.82);
+    opacity: 0.82;
+    filter: grayscale(0.08) brightness(0.96);
     cursor: default;
 }
 
@@ -1053,7 +1083,7 @@ body.playing {
 <div id="tutorCallout" class="tutor-callout hidden"></div>
 <div id="tutorBar" class="tutor-bar hidden">
     <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">上一步</button>
-    <span class="page" id="tutorPageLabel">1 / 13</span>
+    <span class="page" id="tutorPageLabel">1 / 14</span>
     <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">下一步</button>
 </div>
 
@@ -1162,6 +1192,7 @@ const POWER_EFFECT = {
 };
 const TUTOR_PAGES = [
     "class", "swap", "pop", "gravity", "pause", "hint", "stars",
+    "powerUse",
     "powerFace", "powerEdge", "powerIrregular", "powerElliptical", "powerGroup", "finish"
 ];
 
@@ -1247,8 +1278,9 @@ const I18N = {
         tutorCallPop: "三个同类会弹出再碎裂。这就是一次<u>成功消除</u>。",
         tutorCallGravity: "空位上方落下，新图从<u>顶部</u>补入。",
         tutorCallPause: "点右上角<u>暂停</u>或按 Esc。不会重置棋盘。",
-        tutorCallHint: "点<u>提示</u>或按 H，会高亮一对可消除的格子。教程中不消耗次数。",
+        tutorCallHint: "点<u>提示</u>或按 H，会高亮一对可消除的格子。教程中不消耗次数。关卡每 <u>10 秒</u>恢复 1 次，最多 <u>3</u> 次；挑战每 <u>10 次成功消除</u>恢复 1 次，最多 <u>3</u> 次。",
         tutorCallStars: "三颗星：<u>通关</u>、<u>限时</u>、使用<u>提示不超过一次</u>。集齐 <u>9 星</u>解锁挑战。",
+        tutorCallPowerUse: "同类成功消除 <u>5 次</u>后技能充满。先<u>点技能</u>，再<u>点目标格子</u>发动。",
         tutorCallPowerFace: "<u>正向旋涡</u>：旋转周围一圈。贴边时只转还在棋盘上的格子。",
         tutorCallPowerEdge: "<u>侧向盘</u>：消除整行。<u>不计分</u>，也不计入关卡进度或技能充能。",
         tutorCallPowerIrregular: "<u>不规则</u>：打乱周围 3×3。贴边时只打乱棋盘上的格子。",
@@ -1380,8 +1412,9 @@ const I18N = {
         tutorCallPop: "Three of a class pop, then shatter. That is one <u>successful clear</u>.",
         tutorCallGravity: "Tiles above the holes fall. New images spawn from the <u>top</u>.",
         tutorCallPause: "Tap <u>Pause</u> at the top right, or press Esc. The board is not reset.",
-        tutorCallHint: "Tap <u>Hint</u> or press H to highlight a matchable pair. The tutorial does not spend charges.",
+        tutorCallHint: "Tap <u>Hint</u> or press H to highlight a matchable pair. The tutorial does not spend charges. Levels regain 1 every <u>10s</u>, cap <u>3</u>. Challenge regains 1 every <u>10 successful clears</u>, cap <u>3</u>.",
         tutorCallStars: "Three stars: <u>clear</u> the level, finish within the <u>time limit</u>, and use the <u>hint at most once</u>. Collect <u>9 stars</u> to unlock Challenge.",
+        tutorCallPowerUse: "Charge a power by clearing that class <u>5 times</u>. Then <u>tap the power</u>, then <u>tap the target tile</u>.",
         tutorCallPowerFace: "<u>Face-on spirals</u>: rotate the surrounding ring clockwise. On an edge, only on-board neighbors move.",
         tutorCallPowerEdge: "<u>Edge-on disk</u>: clear the whole row. It does <u>not score</u> and does not count toward the level or power charge.",
         tutorCallPowerIrregular: "<u>Irregular</u>: shuffle the 3×3 around the tile. On an edge, only on-board cells shuffle.",
@@ -1477,6 +1510,7 @@ let tutorialAllowCells = null;
 let tutorialPauseOpened = false;
 let tutorialSwapCellA = { r: 0, c: 2 };
 let tutorialSwapCellB = { r: 1, c: 2 };
+let tutorialSnapshots = [];
 let animSpeed = "fast";
 let secondsSinceClear = 0;
 let hintNudgeOn = false;
@@ -2171,14 +2205,24 @@ function renderLegend() {
         const fx = document.createElement("span");
         fx.className = "power-effect";
         fx.textContent = lang === "en" ? effect.en : effect.zh;
+        const chargeRow = document.createElement("div");
+        chargeRow.className = "power-charge-row";
         const bar = document.createElement("span");
         bar.className = "power-charge";
-        bar.textContent = charged
-            ? t("powerReady")
-            : t("powerCharge", { n: charge, max: POWER_CHARGE_COST });
+        bar.textContent = t("powerCharge", { n: charge, max: POWER_CHARGE_COST });
+        const meter = document.createElement("span");
+        meter.className = "power-meter";
+        meter.setAttribute("aria-hidden", "true");
+        for (let i = 0; i < POWER_CHARGE_COST; i++) {
+            const cell = document.createElement("i");
+            if (i < charge) cell.className = "on";
+            meter.appendChild(cell);
+        }
+        chargeRow.appendChild(bar);
+        chargeRow.appendChild(meter);
         copy.appendChild(name);
         copy.appendChild(fx);
-        copy.appendChild(bar);
+        copy.appendChild(chargeRow);
         item.appendChild(img);
         item.appendChild(copy);
         item.addEventListener("click", function () {
@@ -3545,6 +3589,7 @@ function goHome() {
     tutorialActive = false;
     tutorialStep = null;
     tutorialPage = 0;
+    tutorialSnapshots = [];
     armedPower = null;
     stopClocks();
     hideDeadlock();
@@ -3583,6 +3628,7 @@ function startCampaign(levelId) {
     tutorialActive = false;
     tutorialStep = null;
     tutorialPage = 0;
+    tutorialSnapshots = [];
     skipTutorialThisRun = false;
     document.getElementById("playTitle").textContent = levelTitle(levelId);
     document.getElementById("pauseBtn").classList.remove("hidden");
@@ -3783,10 +3829,11 @@ function unionRect(nodes) {
     return { left: left, top: top, right: right, bottom: bottom, width: right - left, height: bottom - top };
 }
 
-function setTutorHole(rect) {
+function setTutorHole(rect, lightBoard) {
     const hole = document.getElementById("tutorHole");
     const mask = document.getElementById("tutorMask");
     if (!hole || !mask) return;
+    hole.classList.toggle("board-light", !!lightBoard);
     if (!rect) {
         hole.classList.add("hidden");
         mask.classList.remove("hidden");
@@ -3863,6 +3910,9 @@ function applyTutorialFocus() {
     } else if (step === "stars") {
         const modal = document.querySelector("#briefOverlay .modal");
         if (modal) targets.push(modal);
+    } else if (step === "powerUse") {
+        const legend = document.getElementById("legend");
+        if (legend) targets.push(legend);
     } else if (step && step.indexOf("power") === 0) {
         const map = {
             powerFace: "FaceOnSpirals",
@@ -3883,6 +3933,9 @@ function applyTutorialFocus() {
     }
     targets.forEach(function (el) { el.classList.add("tutor-focus"); });
     const rect = unionRect(targets);
+    const boardSteps = { class: 1, swap: 1, pop: 1, gravity: 1, finish: 1 };
+    const boardEl = document.getElementById("board");
+    const holeRect = boardSteps[step] ? (unionRect([boardEl]) || rect) : rect;
     const copyKey = {
         class: "tutorCallClass",
         swap: "tutorCallSwap",
@@ -3891,6 +3944,7 @@ function applyTutorialFocus() {
         pause: "tutorCallPause",
         hint: "tutorCallHint",
         stars: "tutorCallStars",
+        powerUse: "tutorCallPowerUse",
         powerFace: "tutorCallPowerFace",
         powerEdge: "tutorCallPowerEdge",
         powerIrregular: "tutorCallPowerIrregular",
@@ -3898,7 +3952,7 @@ function applyTutorialFocus() {
         powerGroup: "tutorCallPowerGroup",
         finish: "tutorCallFinish"
     }[step];
-    setTutorHole(step === "stars" ? null : rect);
+    setTutorHole(step === "stars" ? null : holeRect, !!boardSteps[step]);
     if (step === "stars") {
         const mask = document.getElementById("tutorMask");
         const hole = document.getElementById("tutorHole");
@@ -3959,8 +4013,58 @@ function applyTutorialPage() {
     fitPlayLayout();
 }
 
+function cloneBoardState() {
+    const tiles = [];
+    for (let r = 0; r < ROWS; r++) {
+        tiles[r] = [];
+        for (let c = 0; c < COLS; c++) {
+            tiles[r][c] = board[r] && board[r][c] ? cloneTile(board[r][c]) : null;
+        }
+    }
+    return {
+        tiles: tiles,
+        selected: selected ? { r: selected.r, c: selected.c } : null,
+        score: score,
+        combo: combo,
+        clearsDone: clearsDone,
+        powerCharge: Object.assign({}, powerCharge),
+        armedPower: armedPower,
+        groupGlowClass: groupGlowClass
+    };
+}
+
+function applyBoardState(snap) {
+    if (!snap) return;
+    locked = false;
+    board = [];
+    for (let r = 0; r < snap.tiles.length; r++) {
+        board[r] = [];
+        for (let c = 0; c < snap.tiles[r].length; c++) {
+            board[r][c] = snap.tiles[r][c] ? cloneTile(snap.tiles[r][c]) : null;
+        }
+    }
+    selected = snap.selected ? { r: snap.selected.r, c: snap.selected.c } : null;
+    score = snap.score;
+    combo = snap.combo;
+    clearsDone = snap.clearsDone;
+    powerCharge = Object.assign({}, snap.powerCharge);
+    armedPower = snap.armedPower;
+    groupGlowClass = snap.groupGlowClass;
+    dismissHint();
+    paintFullBoard();
+    paintPowerGlow();
+    renderLegend();
+    updateHud();
+}
+
 function setTutorialPage(index) {
-    tutorialPage = Math.max(0, Math.min(TUTOR_PAGES.length - 1, index));
+    const next = Math.max(0, Math.min(TUTOR_PAGES.length - 1, index));
+    if (tutorialSnapshots[next]) {
+        applyBoardState(tutorialSnapshots[next]);
+    } else {
+        tutorialSnapshots[next] = cloneBoardState();
+    }
+    tutorialPage = next;
     tutorialStep = TUTOR_PAGES[tutorialPage];
     applyTutorialPage();
 }
@@ -3978,6 +4082,7 @@ function beginTutorial() {
     tutorialActive = true;
     tutorialPauseOpened = false;
     paused = false;
+    tutorialSnapshots = [];
     stopClocks();
     setTutorialPage(0);
 }
@@ -3999,6 +4104,7 @@ function answerTutorial(yes) {
 
 function tutorialPrev() {
     if (!tutorialActive) return;
+    locked = false;
     setTutorialPage(tutorialPage - 1);
 }
 
@@ -4012,6 +4118,7 @@ function completeTutorial() {
     tutorialStep = null;
     tutorialActive = false;
     tutorialPage = 0;
+    tutorialSnapshots = [];
     tutorialAllowCells = "all";
     progress.tutorialDone = true;
     saveProgress();

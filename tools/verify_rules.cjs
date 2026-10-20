@@ -372,6 +372,9 @@ const required = [
     ["function answerTutorial", "ask-first tutorial"],
     ["function firePower", "power-up fire"],
     ["hint-nudge", "hint button highlight"],
+    ["powerUse", "shared power-use tutorial page"],
+    ["power-meter", "power charge meter"],
+    ["cloneBoardState", "tutorial board snapshots"],
     ["onKeyDown", "Esc/H shortcuts"]
 ];
 const forbidden = [
