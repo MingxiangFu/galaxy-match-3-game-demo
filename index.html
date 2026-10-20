@@ -338,9 +338,9 @@ body.playing {
     right: 0;
     bottom: 0;
     z-index: 560;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto auto 1fr auto;
     align-items: center;
-    justify-content: center;
     gap: 12px;
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
     background: rgba(7, 11, 22, 0.94);
@@ -352,6 +352,12 @@ body.playing {
     text-align: center;
     font-weight: 800;
     color: var(--gold);
+}
+
+#tutorEndBtn {
+    justify-self: end;
+    margin-left: 24px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
 }
 
 .legend-item.power {
@@ -1083,8 +1089,9 @@ body.playing {
 <div id="tutorCallout" class="tutor-callout hidden"></div>
 <div id="tutorBar" class="tutor-bar hidden">
     <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">上一步</button>
-    <span class="page" id="tutorPageLabel">1 / 14</span>
+    <span class="page" id="tutorPageLabel">1 / 8</span>
     <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">下一步</button>
+    <button type="button" class="btn tutor-end hidden" id="tutorEndBtn" onclick="completeTutorial()">结束教程</button>
 </div>
 
 <div id="challengeOverlay" class="overlay">
@@ -1180,6 +1187,7 @@ const HINT_CLEAR_EVERY = 10;
 const HINT_NUDGE_IDLE_SEC = 15;
 const HINT_NUDGE_FAILS = 5;
 const POWER_CHARGE_COST = 5;
+const POWERS_ENABLED = false;
 const SLOW_SWAP_MS = 560;
 const STORAGE_KEY = "galaxyGameDemo.progress.v1";
 const CHALLENGE_FOLDER = "Challange";
@@ -1195,6 +1203,16 @@ const TUTOR_PAGES = [
     "powerUse",
     "powerFace", "powerEdge", "powerIrregular", "powerElliptical", "powerGroup", "finish"
 ];
+const TUTOR_POWER_PAGES = [
+    "powerUse", "powerFace", "powerEdge", "powerIrregular", "powerElliptical", "powerGroup"
+];
+
+function tutorPages() {
+    if (POWERS_ENABLED) return TUTOR_PAGES.slice();
+    return TUTOR_PAGES.filter(function (id) {
+        return TUTOR_POWER_PAGES.indexOf(id) < 0;
+    });
+}
 
 const LEVEL_ORDER = ["easy", "normal", "hard"];
 const LEVEL_META = {
@@ -1664,6 +1682,7 @@ function applyStaticLang() {
     setText("askNoBtn", "askNo");
     setText("tutorPrevBtn", "tutorPrev");
     setText("tutorNextBtn", "tutorNext");
+    setText("tutorEndBtn", "tutorEnd");
     const langLabel = t("langSwitch");
     const homeLang = document.getElementById("homeLangBtn");
     const playLang = document.getElementById("playLangBtn");
@@ -2186,22 +2205,29 @@ function renderLegend() {
     });
     ids.forEach(function (classId) {
         const info = CLASS_INFO[classId] || { zh: classId, en: classId };
-        const effect = POWER_EFFECT[classId] || { zh: "", en: "" };
-        const charge = powerCharge[classId] || 0;
-        const charged = charge >= POWER_CHARGE_COST;
         const item = document.createElement("div");
-        item.className = "legend-item power";
         item.dataset.classId = classId;
-        if (charged) item.classList.add("charged");
-        if (armedPower === classId) item.classList.add("armed");
         const img = document.createElement("img");
         img.src = groups[classId][0].src;
-        img.alt = info.en;
-        const copy = document.createElement("div");
-        copy.className = "power-copy";
+        img.alt = lang === "en" ? info.en : info.zh;
         const name = document.createElement("span");
         name.className = "power-name";
         name.textContent = lang === "en" ? info.en : info.zh;
+        if (!POWERS_ENABLED) {
+            item.className = "legend-item";
+            item.appendChild(img);
+            item.appendChild(name);
+            legend.appendChild(item);
+            return;
+        }
+        const effect = POWER_EFFECT[classId] || { zh: "", en: "" };
+        const charge = powerCharge[classId] || 0;
+        const charged = charge >= POWER_CHARGE_COST;
+        item.className = "legend-item power";
+        if (charged) item.classList.add("charged");
+        if (armedPower === classId) item.classList.add("armed");
+        const copy = document.createElement("div");
+        copy.className = "power-copy";
         const fx = document.createElement("span");
         fx.className = "power-effect";
         fx.textContent = lang === "en" ? effect.en : effect.zh;
@@ -2310,7 +2336,7 @@ async function clickCell(r, c) {
     if (mode === "challenge" && timeLeft <= 0) return;
     if (tutorialBlocksCell(r, c)) return;
 
-    if (armedPower) {
+    if (POWERS_ENABLED && armedPower) {
         await firePower(r, c);
         return;
     }
@@ -3084,6 +3110,7 @@ async function clearMatches() {
 }
 
 function onPowerClick(classId) {
+    if (!POWERS_ENABLED) return;
     if (playLocked() || tutorialActive) return;
     if ((powerCharge[classId] || 0) < POWER_CHARGE_COST) {
         document.getElementById("message").textContent = t("msgPowerNeedCharge", { n: POWER_CHARGE_COST });
@@ -3959,7 +3986,7 @@ function applyTutorialFocus() {
         if (mask) mask.classList.add("hidden");
         if (hole) hole.classList.add("hidden");
     }
-    placeCallout(rect, copyKey ? t(copyKey) : "", step === "finish");
+    placeCallout(rect, copyKey ? t(copyKey) : "", false);
 }
 
 function applyTutorialPage() {
@@ -3970,18 +3997,24 @@ function applyTutorialPage() {
     const lesson = document.getElementById("lesson");
     if (lesson) lesson.classList.add("hidden");
     setCoachNextVisible(false);
+    const pages = tutorPages();
     const bar = document.getElementById("tutorBar");
     const prevBtn = document.getElementById("tutorPrevBtn");
     const nextBtn = document.getElementById("tutorNextBtn");
+    const endBtn = document.getElementById("tutorEndBtn");
     const pageLabel = document.getElementById("tutorPageLabel");
+    const last = tutorialPage >= pages.length - 1;
     if (bar) bar.classList.remove("hidden");
-    if (pageLabel) pageLabel.textContent = (tutorialPage + 1) + " / " + TUTOR_PAGES.length;
+    if (pageLabel) pageLabel.textContent = (tutorialPage + 1) + " / " + pages.length;
     if (prevBtn) prevBtn.disabled = tutorialPage <= 0;
     if (nextBtn) {
-        const last = tutorialPage >= TUTOR_PAGES.length - 1;
         nextBtn.disabled = last;
         nextBtn.classList.remove("hidden");
         nextBtn.textContent = t("tutorNext");
+    }
+    if (endBtn) {
+        endBtn.classList.toggle("hidden", !last);
+        endBtn.textContent = t("tutorEnd");
     }
 
     if (tutorialStep === "swap") {
@@ -4058,19 +4091,20 @@ function applyBoardState(snap) {
 }
 
 function setTutorialPage(index) {
-    const next = Math.max(0, Math.min(TUTOR_PAGES.length - 1, index));
+    const pages = tutorPages();
+    const next = Math.max(0, Math.min(pages.length - 1, index));
     if (tutorialSnapshots[next]) {
         applyBoardState(tutorialSnapshots[next]);
     } else {
         tutorialSnapshots[next] = cloneBoardState();
     }
     tutorialPage = next;
-    tutorialStep = TUTOR_PAGES[tutorialPage];
+    tutorialStep = pages[tutorialPage];
     applyTutorialPage();
 }
 
 function setTutorialPageById(id) {
-    const idx = TUTOR_PAGES.indexOf(id);
+    const idx = tutorPages().indexOf(id);
     if (idx >= 0) setTutorialPage(idx);
 }
 
@@ -4110,7 +4144,7 @@ function tutorialPrev() {
 
 function tutorialNext() {
     if (!tutorialActive) return;
-    if (tutorialPage >= TUTOR_PAGES.length - 1) return;
+    if (tutorialPage >= tutorPages().length - 1) return;
     setTutorialPage(tutorialPage + 1);
 }
 

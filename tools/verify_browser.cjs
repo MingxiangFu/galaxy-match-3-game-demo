@@ -225,11 +225,11 @@ async function main() {
         if (intro.brief) throw new Error("Yes should skip the normal intro and start the guided tutorial");
         if (!intro.tutorial || intro.step !== "class") throw new Error("Yes should start on the class page");
         if (!intro.mask || !intro.bar) throw new Error("tutorial should show a mask and bottom bar");
-        if (intro.page.replace(/\s/g, "") !== "1/14") throw new Error("page indicator should be 1 / 14, got " + intro.page);
+        if (intro.page.replace(/\s/g, "") !== "1/8") throw new Error("page indicator should be 1 / 8, got " + intro.page);
         if (!intro.prevDisabled) throw new Error("Back should be disabled on page 1");
         if (!intro.callout.includes("<u>") || !intro.skipHidden) throw new Error("callout should underline key words");
         if (intro.cols !== 6 || intro.rows !== 4 || intro.cells !== 24) throw new Error("Easy board should be 6x4");
-        report.push("tutorial Yes: mask, 1/14, Back disabled, 6x4 board, no intro modal");
+        report.push("tutorial Yes: mask, 1/8, Back disabled, 6x4 board, no intro modal");
 
         const tutorialLock = await cdp.eval(`(async function () {
             const step0 = tutorialStep;
@@ -238,8 +238,9 @@ async function main() {
             tutorialNext();
             const step1 = tutorialStep;
             const hintHidden = document.getElementById("hintBtn").classList.contains("hidden");
-            const pages = TUTOR_PAGES.slice();
-            return { step0: step0, blocked: blocked, step1: step1, hintHidden: hintHidden, off: document.querySelectorAll("#board .cell.tutorial-off").length, pages: pages };
+            const pages = tutorPages();
+            const kept = TUTOR_PAGES.slice();
+            return { step0: step0, blocked: blocked, step1: step1, hintHidden: hintHidden, off: document.querySelectorAll("#board .cell.tutorial-off").length, pages: pages, kept: kept, powers: POWERS_ENABLED };
         })()`);
         if (tutorialLock.step0 !== "class") throw new Error("tutorial should start on class step");
         if (tutorialLock.blocked) throw new Error("tutorial class step should ignore other tiles");
@@ -249,11 +250,16 @@ async function main() {
         if (tutorialLock.pages.indexOf("hint") < 0 || tutorialLock.pages[tutorialLock.pages.indexOf("hint") + 1] !== "stars") {
             throw new Error("star page must follow the hint page " + JSON.stringify(tutorialLock.pages));
         }
-        if (tutorialLock.pages[tutorialLock.pages.indexOf("stars") + 1] !== "powerUse" ||
-            tutorialLock.pages[tutorialLock.pages.indexOf("powerUse") + 1] !== "powerFace") {
-            throw new Error("shared power-use page must sit before the five effects " + JSON.stringify(tutorialLock.pages));
+        if (tutorialLock.powers || tutorialLock.pages.indexOf("powerUse") >= 0 || tutorialLock.pages.indexOf("powerFace") >= 0) {
+            throw new Error("power tutorial pages must be skipped while powers are off " + JSON.stringify(tutorialLock.pages));
         }
-        report.push("tutorial: class step locks other tiles, Next goes to swap, stars after hint, usage before powers");
+        if (tutorialLock.pages[tutorialLock.pages.indexOf("stars") + 1] !== "finish") {
+            throw new Error("stars should go to finish while powers are off");
+        }
+        if (tutorialLock.kept.indexOf("powerUse") < 0 || tutorialLock.kept.indexOf("powerFace") < 0) {
+            throw new Error("power page definitions must stay in TUTOR_PAGES");
+        }
+        report.push("tutorial: class step locks other tiles, Next goes to swap, power pages skipped");
 
         const guided = await cdp.eval(`(function () {
             setTutorialPageById("hint");
@@ -271,15 +277,19 @@ async function main() {
             const swapHole = document.getElementById("tutorHole");
             stars.swapLight = swapHole.classList.contains("board-light");
             setTutorialPageById("finish");
-            const endBtn = document.querySelector("#tutorCallout .tutor-end");
+            const endBtn = document.getElementById("tutorEndBtn");
             const nextBtn = document.getElementById("tutorNextBtn");
+            const endRect = endBtn ? endBtn.getBoundingClientRect() : { left: 0 };
+            const nextRect = nextBtn ? nextBtn.getBoundingClientRect() : { right: 0 };
             const finish = {
                 step: tutorialStep,
-                hasEnd: !!endBtn,
+                hasEnd: !!endBtn && !endBtn.classList.contains("hidden"),
                 endText: endBtn ? endBtn.textContent : "",
                 nextText: nextBtn ? nextBtn.textContent : "",
                 nextDisabled: nextBtn ? nextBtn.disabled : false,
-                sameParent: !!(endBtn && nextBtn && endBtn.parentElement === nextBtn.parentElement)
+                sameSlot: !!(endBtn && nextBtn && endBtn.id === nextBtn.id),
+                endOnRight: endRect.left >= nextRect.right - 1,
+                inCallout: !!(endBtn && endBtn.closest("#tutorCallout"))
             };
             setTutorialPageById("swap");
             return { stars: stars, finish: finish };
@@ -296,10 +306,10 @@ async function main() {
             throw new Error("hint page should state both refill rules " + guided.stars.hintCopy);
         }
         if (!guided.stars.swapLight) throw new Error("board tutorial pages should use a lighter board mask");
-        if (!guided.finish.hasEnd || guided.finish.endText !== "结束教程" || guided.finish.nextText !== "下一步" || !guided.finish.nextDisabled || guided.finish.sameParent) {
-            throw new Error("End tutorial must sit apart from Next " + JSON.stringify(guided.finish));
+        if (!guided.finish.hasEnd || guided.finish.endText !== "结束教程" || guided.finish.nextText !== "下一步" || !guided.finish.nextDisabled || guided.finish.sameSlot || !guided.finish.endOnRight || guided.finish.inCallout) {
+            throw new Error("End tutorial must sit on the right, not in the Next slot " + JSON.stringify(guided.finish));
         }
-        report.push("tutorial: star page after hint; End tutorial is not in the Next slot");
+        report.push("tutorial: star page after hint; End tutorial is on the right, not in the Next slot");
 
         const rewind = await cdp.eval(`(async function () {
             animSpeed = "fast";
@@ -325,12 +335,11 @@ async function main() {
             swap(tutorialSwapCellA, tutorialSwapCellB);
             const hits = findMatches().length;
             swap(tutorialSwapCellA, tutorialSwapCellB);
-            setTutorialPageById("powerUse");
-            const useCopy = document.getElementById("tutorCallout").innerHTML;
-            powerCharge.FaceOnSpirals = 3;
+            powerCharge.FaceOnSpirals = POWER_CHARGE_COST;
+            armedPower = null;
+            onPowerClick("FaceOnSpirals");
             renderLegend();
-            const cells = Array.from(document.querySelectorAll('#legend .legend-item[data-class-id="FaceOnSpirals"] .power-meter i'));
-            const label = document.querySelector('#legend .legend-item[data-class-id="FaceOnSpirals"] .power-charge');
+            const legend = document.querySelector('#legend .legend-item[data-class-id="FaceOnSpirals"]');
             setTutorialPageById("swap");
             return {
                 afterClear: afterClear,
@@ -342,17 +351,13 @@ async function main() {
                 hits: hits,
                 charges: hintCharges,
                 elapsed: elapsedSec,
-                useCopy: useCopy,
-                meter: {
-                    n: cells.length,
-                    on: cells.filter(function (el) { return el.classList.contains("on"); }).length,
-                    offRed: cells.filter(function (el) {
-                        return !el.classList.contains("on") && getComputedStyle(el).backgroundColor.indexOf("248") >= 0;
-                    }).length,
-                    onGreen: cells.filter(function (el) {
-                        return el.classList.contains("on") && getComputedStyle(el).backgroundColor.indexOf("74") >= 0;
-                    }).length,
-                    text: label ? label.textContent.replace(/\\s/g, "") : ""
+                legend: {
+                    meters: document.querySelectorAll(".power-meter").length,
+                    charges: document.querySelectorAll(".power-charge").length,
+                    effects: document.querySelectorAll(".power-effect").length,
+                    powerClass: legend ? legend.className : "",
+                    name: legend ? legend.textContent : "",
+                    armed: armedPower
                 }
             };
         })()`);
@@ -365,13 +370,14 @@ async function main() {
         if (rewind.charges !== 3 || rewind.elapsed !== 4) {
             throw new Error("rewind must not restore timer or spend hint charges " + JSON.stringify(rewind));
         }
-        if (!rewind.useCopy.includes("5") || !rewind.useCopy.includes("<u>")) {
-            throw new Error("usage page should explain 5-clear charge " + rewind.useCopy);
+        if (rewind.legend.meters || rewind.legend.charges || rewind.legend.effects || String(rewind.legend.powerClass).indexOf("power") >= 0) {
+            throw new Error("bottom row must be image + localized name only " + JSON.stringify(rewind.legend));
         }
-        if (rewind.meter.n !== 5 || rewind.meter.on !== 3 || !String(rewind.meter.text).includes("3/5")) {
-            throw new Error("charge meter should show 3/5 with 3 filled cells " + JSON.stringify(rewind.meter));
+        if (rewind.legend.armed != null) throw new Error("powers must not arm while gated off");
+        if (!String(rewind.legend.name).includes("正向旋涡") && !String(rewind.legend.name).toLowerCase().includes("spiral")) {
+            throw new Error("legend should still show the class name " + JSON.stringify(rewind.legend));
         }
-        report.push("tutorial rewind restores the swap board; usage page before powers; meter 3/5");
+        report.push("tutorial rewind restores the swap board; powers hidden from the class row");
 
         const tutorFreeze = await cdp.eval(`(function () {
             const startTime = elapsedSec;

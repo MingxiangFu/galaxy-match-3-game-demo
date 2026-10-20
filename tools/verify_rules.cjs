@@ -369,6 +369,7 @@ const required = [
     ["function toggleLang()", "language toggle"],
     ["function toggleAnimSpeed()", "animation speed toggle"],
     ["POWER_CHARGE_COST = 5", "power charge cost"],
+    ["POWERS_ENABLED = false", "powers gated off"],
     ["function answerTutorial", "ask-first tutorial"],
     ["function firePower", "power-up fire"],
     ["hint-nudge", "hint button highlight"],
