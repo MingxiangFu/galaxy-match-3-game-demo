@@ -23,9 +23,9 @@ The image set is distributed as `GalaxyImagesByLevel.zip` in this project/repo. 
 1. Open `index.html` in a browser (double-click, or a local server).
 2. Optional:
    `python3 -m http.server 43191 --bind 127.0.0.1`
-3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level; finish within **60s / 90s / 120s** (Easy / Normal / Hard); use **at most one** hint. Easy asks whether to take the tutorial before the intro; after the first completion, skip is the default. Fast/Slow swap sits left of Hint; **Slow** is the default for new players.
+3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level; finish within **60s / 90s / 120s** (Easy / Normal / Hard); use **at most one** hint. Easy asks whether to take the tutorial before the intro; after the first completion, skip is the default. The Slow/Fast button switches between a slow slide and a fast swap; **Slow** is the default for new players.
 4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 per 10 successful clears. When a run ends, save a result PNG. Levels instead refill +1 every 10s. After 15s without a clear or 5 failed swaps, the hint button highlights (it does not auto-hint).
-5. The bottom class row shows a larger representative image and the class name in the current language, still on one row. Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default Chinese).
+5. The bottom class row shows a larger representative image and the class name in the current language, still on one row. Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default English).
 
 `index.html` is a single portable file (inline CSS/JS, JPEG data URIs). Image bytes are not gzipped.
 

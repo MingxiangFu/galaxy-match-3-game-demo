@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>星系分类消消乐 · Galaxy Match</title>
+<title>Galaxy Class Match-3</title>
 <style>
 :root {
     --cols: 6;
@@ -1013,10 +1013,10 @@ body.playing {
 <body>
 <div id="homeScreen" class="home-shell">
     <div class="home-header">
-        <h1 id="homeTitle">星系分类消消乐</h1>
-        <button type="button" class="btn ghost lang-toggle" id="homeLangBtn" onclick="toggleLang()">EN</button>
+        <h1 id="homeTitle">Galaxy Class Match-3</h1>
+        <button type="button" class="btn ghost lang-toggle" id="homeLangBtn" onclick="toggleLang()">中文</button>
     </div>
-    <p class="lede" id="homeLede">按形态类别匹配不同照片。简单关是教程；普通与困难使用同一套五类（含星系团），同类图像多样性逐步升高。通关一关可解锁下一关；集齐 9 星后开启挑战模式。</p>
+    <p class="lede" id="homeLede">Match different photos by morphological class. Easy is a tutorial; Normal and Hard use the same five classes (including clusters) with more variety. Clear a level to unlock the next; collect 9 stars to open Challenge.</p>
     <div id="levelGrid" class="level-grid"></div>
     <button id="challengeCard" class="challenge-card" type="button"></button>
     <details id="consoleBox" class="console-box">
@@ -1031,12 +1031,12 @@ body.playing {
 
 <div id="gameShell" class="game hidden">
     <div class="nav-row">
-        <button class="btn ghost" type="button" id="backHomeBtn" onclick="goHome()">返回主页</button>
+        <button class="btn ghost" type="button" id="backHomeBtn" onclick="goHome()">Home</button>
         <div class="nav-right">
-            <button type="button" class="btn ghost lang-toggle" id="playLangBtn" onclick="toggleLang()">EN</button>
-            <button id="speedBtn" class="btn ghost" type="button" onclick="toggleAnimSpeed()">慢速</button>
-            <button id="hintBtn" class="btn ghost" type="button" onclick="useHint()">提示 3</button>
-            <button id="pauseBtn" class="btn" type="button" onclick="pauseRun()">暂停</button>
+            <button type="button" class="btn ghost lang-toggle" id="playLangBtn" onclick="toggleLang()">中文</button>
+            <button id="speedBtn" class="btn ghost" type="button" onclick="toggleAnimSpeed()">Slow</button>
+            <button id="hintBtn" class="btn ghost" type="button" onclick="useHint()">Hint 3</button>
+            <button id="pauseBtn" class="btn" type="button" onclick="pauseRun()">Pause</button>
         </div>
     </div>
     <div class="header">
@@ -1110,11 +1110,11 @@ body.playing {
 
 <div id="askTutorialOverlay" class="overlay">
     <div class="modal">
-        <h2 id="askTitle">要先看教程吗？</h2>
-        <p class="lead" id="askLead">第一次进入简单关可以跟着学交换、暂停、提示和技能。</p>
+        <h2 id="askTitle">Take the tutorial?</h2>
+        <p class="lead" id="askLead">The first Easy run walks you through matching, swaps, pause, and hints.</p>
         <div class="modal-actions">
-            <button type="button" id="askYesBtn" onclick="answerTutorial(true)">开始教程</button>
-            <button class="ghost" type="button" id="askNoBtn" onclick="answerTutorial(false)">直接开始</button>
+            <button type="button" id="askYesBtn" onclick="answerTutorial(true)">Start tutorial</button>
+            <button class="ghost" type="button" id="askNoBtn" onclick="answerTutorial(false)">Skip to play</button>
         </div>
     </div>
 </div>
@@ -1125,12 +1125,12 @@ body.playing {
 <div id="tutorBar" class="tutor-bar hidden">
     <span class="tutor-bar-side" aria-hidden="true"></span>
     <div class="tutor-nav">
-        <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">上一步</button>
+        <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">Back</button>
         <span class="page" id="tutorPageLabel">1 / 9</span>
-        <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">下一步</button>
+        <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">Next</button>
     </div>
     <div class="tutor-bar-side tutor-end-slot">
-        <button type="button" class="btn tutor-end hidden" id="tutorEndBtn" onclick="completeTutorial()">结束教程</button>
+        <button type="button" class="btn tutor-end hidden" id="tutorEndBtn" onclick="completeTutorial()">End tutorial</button>
     </div>
 </div>
 
@@ -1326,7 +1326,7 @@ const I18N = {
         speedFast: "快速",
         speedSlow: "慢速",
         askTitle: "要先看教程吗？",
-        askLead: "第一次进入简单关可以跟着学交换、暂停、提示和技能。",
+        askLead: "第一次进入简单关可以跟着学匹配、交换、暂停和提示。",
         askYes: "开始教程",
         askNo: "直接开始",
         tutorPrev: "上一步",
@@ -1335,9 +1335,9 @@ const I18N = {
         tutorCallClass: "匹配看的是<u>形态类别</u>，不是同一张照片。",
         tutorCallSwap: "交换相邻两格，让<u>三个同类</u>连成一线。",
         tutorCallPop: "三个同类会弹出再碎裂。这就是一次<u>成功消除</u>。",
-        tutorCallAnim: "格子会先<u>滑动</u>，再碎裂或滑回。提示按钮<u>左边</u>的按钮可切换快慢。",
+        tutorCallAnim: "点这个按钮，在<u>慢速滑动</u>和<u>快速交换</u>之间切换。",
         tutorCallGravity: "空位上方落下，新图从<u>顶部</u>补入。",
-        tutorCallPause: "点右上角<u>暂停</u>或按 Esc。不会重置棋盘。",
+        tutorCallPause: "点<u>暂停</u>：计时停止，窗口会显示进度和三星规则。",
         tutorCallHint: "点<u>提示</u>或按 H，会高亮一对可消除的格子。教程中不消耗次数。关卡每 <u>10 秒</u>恢复 1 次，最多 <u>3</u> 次；挑战每 <u>10 次成功消除</u>恢复 1 次，最多 <u>3</u> 次。",
         tutorCallStars: "三颗星：<u>通关</u>、<u>限时</u>、使用<u>提示不超过一次</u>。集齐 <u>9 星</u>解锁挑战。",
         tutorCallPowerUse: "同类成功消除 <u>5 次</u>后技能充满。先<u>点技能</u>，再<u>点目标格子</u>发动。",
@@ -1346,7 +1346,7 @@ const I18N = {
         tutorCallPowerIrregular: "<u>不规则</u>：打乱周围 3×3。贴边时只打乱棋盘上的格子。",
         tutorCallPowerElliptical: "<u>椭圆</u>：只消除这一格。<u>不计分</u>，也不计入进度或充能。",
         tutorCallPowerGroup: "<u>星系团</u>：高亮该格所属类别的所有格子，直到你交换或使用提示。",
-        tutorCallFinish: "教程结束。请点右侧的<u>结束教程</u>开始自由玩。计时随后开始。",
+        tutorCallFinish: "教程结束。点<u>结束教程</u>开始自由玩。计时随后开始。",
         powerCharge: "{n} / {max}",
         powerReady: "已充满",
         msgPowerArmed: "再点一次取消，或点棋盘上的一格发动技能",
@@ -1366,7 +1366,7 @@ const I18N = {
         anotherRound: "再来一局",
         challengeEnterTitle: "挑战模式",
         challengeEnterLead: "与关卡不同：每次消除计分；每次消除为倒计时 +{bonus} 秒；提示开局 3 次、最多 3 次，每 10 次成功消除恢复 1 次（满次数时不累计）。时间到 0 结束。",
-        challengePauseLead: "倒计时已暂停。继续后仍从剩余时间开始。",
+        challengePauseLead: "倒计时已停止。点继续后接着计时。",
         hintChargesLine: "提示次数 {n} / {max}",
         timeBonusTag: "每次消除 +{bonus}s",
         remaining: "{n}s 剩余",
@@ -1379,9 +1379,9 @@ const I18N = {
         tutorPopKicker: "教程 · 消除",
         tutorPop: "三个同类会先放大弹出，再碎裂消失。这就是一次成功消除。",
         tutorGravityKicker: "教程 · 下落补位",
-        tutorGravity: "空位上方的格子落下，新图像从顶部补入。暂停（按钮或 Esc）随时可用。",
+        tutorGravity: "空位上方的格子落下，新图像从顶部补入。",
         tutorPauseKicker: "教程 · 暂停",
-        tutorPause: "点右上角「暂停」或按 Esc。暂停不会重置棋盘或进度。弹窗里的三颗星会说明评分：通关、限时、提示不超过 1 次。",
+        tutorPause: "点「暂停」或按 Esc：计时停止。窗口会显示本局进度和三星规则。",
         tutorHintKicker: "教程 · 提示",
         tutorHint: "点「提示」或按 H，会高亮一对可消除的格子。教程中的这一次不消耗次数，也不计入第三星。",
         tutorHintSwapKicker: "教程 · 按提示交换",
@@ -1461,7 +1461,7 @@ const I18N = {
         speedFast: "Fast",
         speedSlow: "Slow",
         askTitle: "Take the tutorial?",
-        askLead: "The first Easy run can walk you through swaps, pause, hints, and power-ups.",
+        askLead: "The first Easy run walks you through matching, swaps, pause, and hints.",
         askYes: "Start tutorial",
         askNo: "Skip to play",
         tutorPrev: "Back",
@@ -1470,9 +1470,9 @@ const I18N = {
         tutorCallClass: "Matching is by <u>morphological class</u>, not the same photo.",
         tutorCallSwap: "Swap two neighbors to make <u>three of a class</u> in a line.",
         tutorCallPop: "Three of a class pop, then shatter. That is one <u>successful clear</u>.",
-        tutorCallAnim: "Tiles <u>slide</u>, then shatter or slide back. The button <u>left of Hint</u> switches speed.",
+        tutorCallAnim: "This button switches between a <u>slow slide</u> and a <u>fast swap</u>.",
         tutorCallGravity: "Tiles above the holes fall. New images spawn from the <u>top</u>.",
-        tutorCallPause: "Tap <u>Pause</u> at the top right, or press Esc. The board is not reset.",
+        tutorCallPause: "Tap <u>Pause</u>: the timer stops, and a window shows your progress and star rules.",
         tutorCallHint: "Tap <u>Hint</u> or press H to highlight a matchable pair. The tutorial does not spend charges. Levels regain 1 every <u>10s</u>, cap <u>3</u>. Challenge regains 1 every <u>10 successful clears</u>, cap <u>3</u>.",
         tutorCallStars: "Three stars: <u>clear</u> the level, finish within the <u>time limit</u>, and use the <u>hint at most once</u>. Collect <u>9 stars</u> to unlock Challenge.",
         tutorCallPowerUse: "Charge a power by clearing that class <u>5 times</u>. Then <u>tap the power</u>, then <u>tap the target tile</u>.",
@@ -1481,7 +1481,7 @@ const I18N = {
         tutorCallPowerIrregular: "<u>Irregular</u>: shuffle the 3×3 around the tile. On an edge, only on-board cells shuffle.",
         tutorCallPowerElliptical: "<u>Elliptical</u>: clear this tile only. It does <u>not score</u> and does not charge a power.",
         tutorCallPowerGroup: "<u>Galaxy group</u>: highlight every tile of that class until you swap or use a hint.",
-        tutorCallFinish: "Tutorial complete. Tap <u>End tutorial</u> on the right to play freely. The timer starts then.",
+        tutorCallFinish: "Tutorial complete. Tap <u>End tutorial</u> to play freely. The timer starts then.",
         powerCharge: "{n} / {max}",
         powerReady: "Charged",
         msgPowerArmed: "Tap again to cancel, or tap a tile to fire",
@@ -1501,7 +1501,7 @@ const I18N = {
         anotherRound: "Play again",
         challengeEnterTitle: "Challenge",
         challengeEnterLead: "Unlike levels: each clear scores; each clear adds {bonus}s to the timer; hints start at 3, cap at 3, and refill +1 per 10 successful clears (clears at the cap do not count). The run ends at 0.",
-        challengePauseLead: "The countdown is paused. Continue keeps the remaining time.",
+        challengePauseLead: "The countdown is stopped. Tap Continue to resume.",
         hintChargesLine: "Hints {n} / {max}",
         timeBonusTag: "+{bonus}s per clear",
         remaining: "{n}s left",
@@ -1514,9 +1514,9 @@ const I18N = {
         tutorPopKicker: "Tutorial · Clear / pop",
         tutorPop: "Three of a class pop larger, then shatter. That counts as one successful clear.",
         tutorGravityKicker: "Tutorial · Gravity refill",
-        tutorGravity: "Tiles above the holes fall, and new images spawn at the top. Pause (button or Esc) always works.",
+        tutorGravity: "Tiles above the holes fall, and new images spawn at the top.",
         tutorPauseKicker: "Tutorial · Pause",
-        tutorPause: "Tap Pause at the top right, or press Esc. Pause does not reset the board. The modal lists the three stars: clear, time limit, and at most 1 hint.",
+        tutorPause: "Tap Pause or press Esc: the timer stops. A window shows your progress and the star rules.",
         tutorHintKicker: "Tutorial · Hint",
         tutorHint: "Tap Hint or press H to highlight a matchable pair. This tutorial hint does not spend a charge and does not count toward star 3.",
         tutorHintSwapKicker: "Tutorial · Swap the hint",
@@ -1536,7 +1536,7 @@ const I18N = {
 };
 
 let progress = defaultProgress();
-let lang = "zh";
+let lang = "en";
 let mode = "home";
 let currentLevelId = null;
 let activeCatalog = [];
@@ -1622,7 +1622,7 @@ function defaultProgress() {
         bestTime: { easy: null, normal: null, hard: null },
         challengeUnlocked: false,
         tutorialDone: false,
-        lang: "zh",
+        lang: "en",
         animSpeed: "slow"
     };
 }
@@ -1644,7 +1644,7 @@ function loadProgress() {
         });
         next.challengeUnlocked = !!parsed.challengeUnlocked;
         next.tutorialDone = !!parsed.tutorialDone;
-        next.lang = parsed.lang === "en" ? "en" : "zh";
+        next.lang = parsed.lang === "zh" ? "zh" : "en";
         next.animSpeed = parsed.animSpeed === "fast" ? "fast" : "slow";
         return next;
     } catch (err) {
@@ -1834,7 +1834,7 @@ function renderHome() {
 }
 
 function resetAllProgress() {
-    const keepLang = progress.lang === "en" ? "en" : "zh";
+    const keepLang = progress.lang === "zh" ? "zh" : "en";
     const keepSpeed = progress.animSpeed === "slow" ? "slow" : "fast";
     progress = defaultProgress();
     progress.lang = keepLang;
@@ -4275,7 +4275,7 @@ function onKeyDown(event) {
 }
 
 progress = loadProgress();
-lang = progress.lang === "en" ? "en" : "zh";
+lang = progress.lang === "zh" ? "zh" : "en";
 animSpeed = progress.animSpeed === "fast" ? "fast" : "slow";
 applyStaticLang();
 renderHome();

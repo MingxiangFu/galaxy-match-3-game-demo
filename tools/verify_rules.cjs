@@ -360,7 +360,8 @@ const required = [
     ["resetAllProgress", "console reset"],
     ["win-stars .on", "results filled-star style"],
     ["fitPlayLayout", "viewport fit"],
-    ["onclick=\"pauseRun()\">暂停", "top pause control"],
+    ["onclick=\"pauseRun()\">Pause", "top pause control"],
+    ['lang: "en"', "English default language"],
     ["ensurePlayableBoard", "deadlock reshuffle"],
     ["reshuffleBoardPlanted", "planted-move reshuffle"],
     ["pickGravitySpawn", "match-aware gravity spawn"],
@@ -385,7 +386,12 @@ const required = [
 const forbidden = [
     ["FAIL_HINT_COUNT", "auto-hint after misses"],
     ["IDLE_HINT_MS", "auto-hint after idle"],
-    ["HINT_CHARGE_EVERY = 10", "old +1 per 10 clears"]
+    ["HINT_CHARGE_EVERY = 10", "old +1 per 10 clears"],
+    ["left of Hint", "anim page locating via Hint"],
+    ["提示按钮左边", "anim page locating via Hint (zh)"],
+    ["不会重置棋盘", "pause leftover from restart bug"],
+    ["The board is not reset", "pause leftover from restart bug"],
+    ["Pause does not reset", "pause leftover from restart bug"]
 ];
 const playChunk = html.slice(html.indexOf('id="playArea"'), html.indexOf('id="briefOverlay"'));
 if (playChunk.includes("restartCurrentRun")) {

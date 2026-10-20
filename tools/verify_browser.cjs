@@ -182,11 +182,58 @@ async function main() {
         if (home.starEasy !== 60 || home.starNormal !== 90 || home.starHard !== 120) {
             throw new Error("star times should be 60/90/120 " + JSON.stringify(home));
         }
-        if (home.lang !== "zh" || !home.homeLang.includes("星系")) throw new Error("default language should be Chinese");
+        if (home.lang !== "en" || !home.homeLang.toLowerCase().includes("galaxy")) {
+            throw new Error("fresh visit should default to English " + JSON.stringify(home));
+        }
         if (home.animSpeed !== "slow" || home.progressSpeed !== "slow") {
             throw new Error("fresh load should default to slow animation " + JSON.stringify(home));
         }
-        report.push("lock: Easy open, Normal/Hard/Challenge locked; stars 60/90/120; default zh; slow anim");
+        report.push("lock: Easy open, Normal/Hard/Challenge locked; stars 60/90/120; default en; slow anim");
+
+        await cdp.eval("startCampaign('easy')");
+        await sleep(400);
+        await cdp.eval("answerTutorial(true)");
+        await sleep(400);
+        const enTutor = await cdp.eval(`(function () {
+            setTutorialPageById("anim");
+            const anim = document.getElementById("tutorCallout").innerHTML;
+            setTutorialPageById("pause");
+            const pause = document.getElementById("tutorCallout").innerHTML;
+            return {
+                lang: lang,
+                anim: anim,
+                pause: pause,
+                askLead: I18N.en.askLead
+            };
+        })()`);
+        if (enTutor.lang !== "en") throw new Error("English tutorial should still be in English");
+        if (/hint/i.test(enTutor.anim)) throw new Error("animation page must not mention Hint " + enTutor.anim);
+        if (!/slow/i.test(enTutor.anim) || !/fast/i.test(enTutor.anim)) {
+            throw new Error("animation page should name slow slide vs fast swap " + enTutor.anim);
+        }
+        if (!/timer/i.test(enTutor.pause) || !/window/i.test(enTutor.pause) || !/star/i.test(enTutor.pause)) {
+            throw new Error("pause page should say the timer stops and a window shows stars " + enTutor.pause);
+        }
+        if (/not reset|does not reset/i.test(enTutor.pause)) {
+            throw new Error("pause page should not mention the old reset leftover " + enTutor.pause);
+        }
+        if (/power-up/i.test(enTutor.askLead)) throw new Error("ask-tutorial lead should not mention power-ups " + enTutor.askLead);
+        report.push("English tutorial: anim names Slow/Fast, pause stops the timer, no Hint/reset leftover");
+
+        await cdp.eval("goHome(); setLang('zh')");
+        await sleep(200);
+        await cdp.eval("location.reload()");
+        await sleep(400);
+        await cdp.waitReady();
+        const zhSaved = await cdp.eval(`({
+            lang: lang,
+            stored: JSON.parse(localStorage.getItem(STORAGE_KEY)).lang,
+            title: document.getElementById("homeTitle").textContent
+        })`);
+        if (zhSaved.lang !== "zh" || zhSaved.stored !== "zh" || !zhSaved.title.includes("星系")) {
+            throw new Error("saved Chinese should still load Chinese " + JSON.stringify(zhSaved));
+        }
+        report.push("saved Chinese language still loads after reload");
 
         await cdp.eval("startCampaign('easy')");
         await sleep(400);
@@ -311,6 +358,8 @@ async function main() {
                 speedFocused: !!(speedBtn && speedBtn.classList.contains("tutor-focus")),
                 page: document.getElementById("tutorPageLabel").textContent
             };
+            setTutorialPageById("pause");
+            const pauseCopy = document.getElementById("tutorCallout").innerHTML;
             const bar = (function () {
                 const prev = document.getElementById("tutorPrevBtn").getBoundingClientRect();
                 const next = document.getElementById("tutorNextBtn").getBoundingClientRect();
@@ -378,7 +427,7 @@ async function main() {
             }
             const legendWide = legendMetrics();
             setTutorialPageById("swap");
-            return { stars: stars, finish: finish, anim: anim, bar: bar, gravity: gravity, finishLock: finishLock, legendWide: legendWide };
+            return { stars: stars, finish: finish, anim: anim, pauseCopy: pauseCopy, bar: bar, gravity: gravity, finishLock: finishLock, legendWide: legendWide };
         })()`);
         if (guided.stars.step !== "stars" || !guided.stars.brief) {
             throw new Error("page after hint should open the pause modal for star rules " + JSON.stringify(guided.stars));
@@ -401,10 +450,18 @@ async function main() {
         if (guided.anim.step !== "anim" || !guided.anim.speedFocused) {
             throw new Error("animation page should highlight the speed button " + JSON.stringify(guided.anim));
         }
+        if (/提示|hint/i.test(guided.anim.copy)) {
+            throw new Error("animation page must not locate the control relative to Hint " + guided.anim.copy);
+        }
         if (!(guided.anim.copy.includes("滑动") || guided.anim.copy.toLowerCase().includes("slide")) ||
-            !(guided.anim.copy.includes("碎裂") || guided.anim.copy.toLowerCase().includes("shatter")) ||
-            !(guided.anim.copy.includes("提示") || guided.anim.copy.toLowerCase().includes("hint"))) {
-            throw new Error("animation page should explain slide/shatter and the hint-adjacent toggle " + guided.anim.copy);
+            !(guided.anim.copy.includes("快速") || guided.anim.copy.toLowerCase().includes("fast"))) {
+            throw new Error("animation page should explain slow slide vs fast swap " + guided.anim.copy);
+        }
+        if (!guided.pauseCopy.includes("计时") || !guided.pauseCopy.includes("窗口") || !guided.pauseCopy.includes("星")) {
+            throw new Error("pause page should say the timer stops and a window shows star rules " + guided.pauseCopy);
+        }
+        if (guided.pauseCopy.includes("重置")) {
+            throw new Error("pause page should not mention reset " + guided.pauseCopy);
         }
         ["gravity", "finishLock"].forEach(function (key) {
             const page = guided[key];
