@@ -235,6 +235,160 @@ body.playing {
     background: linear-gradient(135deg, #38bdf8, #1d4ed8);
 }
 
+#speedBtn {
+    min-width: 72px;
+}
+
+#hintBtn.hint-nudge {
+    animation: hintBtnPulse 0.7s ease-in-out infinite;
+    box-shadow: 0 0 0 3px #fff, 0 0 16px rgba(251, 191, 36, 0.85);
+}
+
+@keyframes hintBtnPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+.cell.slide-swap {
+    z-index: 24;
+    overflow: visible;
+    animation: slideSwap var(--swap-ms, 560ms) ease forwards;
+}
+
+@keyframes slideSwap {
+    from { transform: translate(0, 0); }
+    to { transform: translate(var(--dx, 0), var(--dy, 0)); }
+}
+
+.cell.shuffle-wobble .tile-img {
+    animation: shuffleWobble 0.55s ease;
+}
+
+@keyframes shuffleWobble {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    35% { transform: translate(8px, -6px) rotate(8deg); }
+    70% { transform: translate(-7px, 5px) rotate(-8deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.cell.power-glow {
+    z-index: 15;
+    box-shadow: 0 0 0 3px #fde68a, 0 0 16px rgba(251, 191, 36, 0.75);
+}
+
+.tutor-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    background: rgba(2, 6, 23, 0.58);
+    pointer-events: none;
+}
+
+.tutor-hole {
+    position: fixed;
+    z-index: 181;
+    pointer-events: none;
+    border-radius: 14px;
+    box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.58);
+}
+
+.tutor-focus {
+    position: relative;
+    z-index: 200 !important;
+    pointer-events: auto !important;
+    box-shadow: 0 0 0 3px #fff, 0 0 22px rgba(125, 211, 252, 0.8);
+}
+
+.tutor-callout {
+    position: fixed;
+    z-index: 560;
+    max-width: min(340px, 86vw);
+    color: #fff;
+    font-size: clamp(20px, 3.4vw, 28px);
+    font-weight: 900;
+    line-height: 1.35;
+    text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000,
+        0 0 8px #000;
+    pointer-events: none;
+}
+
+.tutor-callout u {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.tutor-callout .tutor-end {
+    pointer-events: auto;
+    display: block;
+    margin-top: 14px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+}
+
+.tutor-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 560;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(7, 11, 22, 0.94);
+    border-top: 1px solid rgba(125, 211, 252, 0.25);
+}
+
+.tutor-bar .page {
+    min-width: 72px;
+    text-align: center;
+    font-weight: 800;
+    color: var(--gold);
+}
+
+.legend-item.power {
+    cursor: default;
+    align-items: flex-start;
+}
+
+.legend-item.power.charged {
+    cursor: pointer;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px var(--gold);
+}
+
+.legend-item.power.armed {
+    animation: powerArmed 0.45s ease-in-out infinite;
+}
+
+@keyframes powerArmed {
+    0%, 100% { box-shadow: 0 0 0 2px var(--gold); }
+    50% { box-shadow: 0 0 0 4px #fff, 0 0 14px var(--gold); }
+}
+
+.legend-item .power-name {
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.legend-item .power-effect {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.legend-item .power-charge {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--accent);
+}
+
 .cell.tutorial-off {
     opacity: 0.38;
     filter: grayscale(0.35) brightness(0.82);
@@ -644,6 +798,12 @@ body.playing {
 }
 
 .btn:hover, .restart:hover { transform: translateY(-1px); }
+.btn:disabled, .modal button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+.legend-item .power-copy { min-width: 0; }
 
 .footer-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
@@ -803,6 +963,7 @@ body.playing {
         <button class="btn ghost" type="button" id="backHomeBtn" onclick="goHome()">返回主页</button>
         <div class="nav-right">
             <button type="button" class="btn ghost lang-toggle" id="playLangBtn" onclick="toggleLang()">EN</button>
+            <button id="speedBtn" class="btn ghost" type="button" onclick="toggleAnimSpeed()">慢速</button>
             <button id="hintBtn" class="btn ghost" type="button" onclick="useHint()">提示 3</button>
             <button id="pauseBtn" class="btn" type="button" onclick="pauseRun()">暂停</button>
         </div>
@@ -874,6 +1035,26 @@ body.playing {
             <button class="ghost" type="button" id="winAgainBtn" onclick="restartCurrentRun()">再玩一次</button>
         </div>
     </div>
+</div>
+
+<div id="askTutorialOverlay" class="overlay">
+    <div class="modal">
+        <h2 id="askTitle">要先看教程吗？</h2>
+        <p class="lead" id="askLead">第一次进入简单关可以跟着学交换、暂停、提示和技能。</p>
+        <div class="modal-actions">
+            <button type="button" id="askYesBtn" onclick="answerTutorial(true)">开始教程</button>
+            <button class="ghost" type="button" id="askNoBtn" onclick="answerTutorial(false)">直接开始</button>
+        </div>
+    </div>
+</div>
+
+<div id="tutorMask" class="tutor-mask hidden"></div>
+<div id="tutorHole" class="tutor-hole hidden"></div>
+<div id="tutorCallout" class="tutor-callout hidden"></div>
+<div id="tutorBar" class="tutor-bar hidden">
+    <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">上一步</button>
+    <span class="page" id="tutorPageLabel">1 / 13</span>
+    <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">下一步</button>
 </div>
 
 <div id="challengeOverlay" class="overlay">
@@ -966,8 +1147,23 @@ const TIME_BONUS = 3;
 const HINT_CHARGE_MAX = 3;
 const HINT_REFILL_SEC = 10;
 const HINT_CLEAR_EVERY = 10;
+const HINT_NUDGE_IDLE_SEC = 15;
+const HINT_NUDGE_FAILS = 5;
+const POWER_CHARGE_COST = 5;
+const SLOW_SWAP_MS = 560;
 const STORAGE_KEY = "galaxyGameDemo.progress.v1";
 const CHALLENGE_FOLDER = "Challange";
+const POWER_EFFECT = {
+    FaceOnSpirals: { zh: "顺时针旋转周围一圈", en: "Rotate the ring clockwise" },
+    EdgeOnDisk: { zh: "消除整行（不计分）", en: "Clear the whole row (no score)" },
+    Irregular: { zh: "打乱周围 3×3", en: "Shuffle the 3×3 around it" },
+    Elliptical: { zh: "消除这一格（不计分）", en: "Clear this tile (no score)" },
+    Group: { zh: "高亮该格的同类", en: "Highlight every tile of that class" }
+};
+const TUTOR_PAGES = [
+    "class", "swap", "pop", "gravity", "pause", "hint", "stars",
+    "powerFace", "powerEdge", "powerIrregular", "powerElliptical", "powerGroup", "finish"
+];
 
 const LEVEL_ORDER = ["easy", "normal", "hard"];
 const LEVEL_META = {
@@ -1037,6 +1233,37 @@ const I18N = {
         starGoing: "进行中",
         starLost: "已失去",
         skipTutorial: "跳过教程",
+        speedFast: "快速",
+        speedSlow: "慢速",
+        askTitle: "要先看教程吗？",
+        askLead: "第一次进入简单关可以跟着学交换、暂停、提示和技能。",
+        askYes: "开始教程",
+        askNo: "直接开始",
+        tutorPrev: "上一步",
+        tutorNext: "下一步",
+        tutorEnd: "结束教程",
+        tutorCallClass: "匹配看的是<u>形态类别</u>，不是同一张照片。",
+        tutorCallSwap: "交换相邻两格，让<u>三个同类</u>连成一线。",
+        tutorCallPop: "三个同类会弹出再碎裂。这就是一次<u>成功消除</u>。",
+        tutorCallGravity: "空位上方落下，新图从<u>顶部</u>补入。",
+        tutorCallPause: "点右上角<u>暂停</u>或按 Esc。不会重置棋盘。",
+        tutorCallHint: "点<u>提示</u>或按 H，会高亮一对可消除的格子。教程中不消耗次数。",
+        tutorCallStars: "三颗星：<u>通关</u>、<u>限时</u>、使用<u>提示不超过一次</u>。集齐 <u>9 星</u>解锁挑战。",
+        tutorCallPowerFace: "<u>正向旋涡</u>：旋转周围一圈。贴边时只转还在棋盘上的格子。",
+        tutorCallPowerEdge: "<u>侧向盘</u>：消除整行。<u>不计分</u>，也不计入关卡进度或技能充能。",
+        tutorCallPowerIrregular: "<u>不规则</u>：打乱周围 3×3。贴边时只打乱棋盘上的格子。",
+        tutorCallPowerElliptical: "<u>椭圆</u>：只消除这一格。<u>不计分</u>，也不计入进度或充能。",
+        tutorCallPowerGroup: "<u>星系团</u>：高亮该格所属类别的所有格子，直到你交换或使用提示。",
+        tutorCallFinish: "教程结束。棋盘已解锁，计时即将开始。请点下面的<u>结束教程</u>开始自由玩。",
+        powerCharge: "{n} / {max}",
+        powerReady: "已充满",
+        msgPowerArmed: "再点一次取消，或点棋盘上的一格发动技能",
+        msgPowerNeedCharge: "先用该类成功消除 {n} 次来充满技能",
+        msgPowerRow: "整行已消除，不计分",
+        msgPowerSingle: "这一格已消除，不计分",
+        msgPowerRotate: "周围格子已顺时针转一格",
+        msgPowerShuffle: "周围格子已打乱",
+        msgPowerGroup: "已高亮该类别的所有格子",
         winTitle: "通关成功",
         winLead: "{title} 用时 {sec}s。星级会保留历史最好成绩。",
         challengeOverTitle: "时间到",
@@ -1139,6 +1366,37 @@ const I18N = {
         starGoing: "In progress",
         starLost: "Lost",
         skipTutorial: "Skip tutorial",
+        speedFast: "Fast",
+        speedSlow: "Slow",
+        askTitle: "Take the tutorial?",
+        askLead: "The first Easy run can walk you through swaps, pause, hints, and power-ups.",
+        askYes: "Start tutorial",
+        askNo: "Skip to play",
+        tutorPrev: "Back",
+        tutorNext: "Next",
+        tutorEnd: "End tutorial",
+        tutorCallClass: "Matching is by <u>morphological class</u>, not the same photo.",
+        tutorCallSwap: "Swap two neighbors to make <u>three of a class</u> in a line.",
+        tutorCallPop: "Three of a class pop, then shatter. That is one <u>successful clear</u>.",
+        tutorCallGravity: "Tiles above the holes fall. New images spawn from the <u>top</u>.",
+        tutorCallPause: "Tap <u>Pause</u> at the top right, or press Esc. The board is not reset.",
+        tutorCallHint: "Tap <u>Hint</u> or press H to highlight a matchable pair. The tutorial does not spend charges.",
+        tutorCallStars: "Three stars: <u>clear</u> the level, finish within the <u>time limit</u>, and use the <u>hint at most once</u>. Collect <u>9 stars</u> to unlock Challenge.",
+        tutorCallPowerFace: "<u>Face-on spirals</u>: rotate the surrounding ring clockwise. On an edge, only on-board neighbors move.",
+        tutorCallPowerEdge: "<u>Edge-on disk</u>: clear the whole row. It does <u>not score</u> and does not count toward the level or power charge.",
+        tutorCallPowerIrregular: "<u>Irregular</u>: shuffle the 3×3 around the tile. On an edge, only on-board cells shuffle.",
+        tutorCallPowerElliptical: "<u>Elliptical</u>: clear this tile only. It does <u>not score</u> and does not charge a power.",
+        tutorCallPowerGroup: "<u>Galaxy group</u>: highlight every tile of that class until you swap or use a hint.",
+        tutorCallFinish: "Tutorial complete. The board unlocks and the timer is about to start. Tap <u>End tutorial</u> to play freely.",
+        powerCharge: "{n} / {max}",
+        powerReady: "Charged",
+        msgPowerArmed: "Tap again to cancel, or tap a tile to fire",
+        msgPowerNeedCharge: "Clear this class {n} times to charge the power",
+        msgPowerRow: "Row cleared; no score",
+        msgPowerSingle: "Tile cleared; no score",
+        msgPowerRotate: "Neighbors rotated clockwise",
+        msgPowerShuffle: "Neighbors shuffled",
+        msgPowerGroup: "Every tile of that class is highlighted",
         winTitle: "Level cleared",
         winLead: "{title} in {sec}s. Stars keep your best history.",
         challengeOverTitle: "Time up",
@@ -1214,10 +1472,17 @@ let briefKind = "enter";
 let skipTutorialThisRun = false;
 let tutorialActive = false;
 let tutorialStep = null;
+let tutorialPage = 0;
 let tutorialAllowCells = null;
 let tutorialPauseOpened = false;
 let tutorialSwapCellA = { r: 0, c: 2 };
 let tutorialSwapCellB = { r: 1, c: 2 };
+let animSpeed = "fast";
+let secondsSinceClear = 0;
+let hintNudgeOn = false;
+let powerCharge = {};
+let armedPower = null;
+let groupGlowClass = null;
 
 function t(key, vars) {
     const pack = I18N[lang] || I18N.zh;
@@ -1262,7 +1527,8 @@ function defaultProgress() {
         bestTime: { easy: null, normal: null, hard: null },
         challengeUnlocked: false,
         tutorialDone: false,
-        lang: "zh"
+        lang: "zh",
+        animSpeed: "fast"
     };
 }
 
@@ -1284,6 +1550,7 @@ function loadProgress() {
         next.challengeUnlocked = !!parsed.challengeUnlocked;
         next.tutorialDone = !!parsed.tutorialDone;
         next.lang = parsed.lang === "en" ? "en" : "zh";
+        next.animSpeed = parsed.animSpeed === "slow" ? "slow" : "fast";
         return next;
     } catch (err) {
         return defaultProgress();
@@ -1357,13 +1624,21 @@ function applyStaticLang() {
     setText("coachNext", "next");
     setText("deadlockCopy", "deadlockCopy");
     setText("deadlockRefreshBtn", "deadlockRefresh");
+    setText("askTitle", "askTitle");
+    setText("askLead", "askLead");
+    setText("askYesBtn", "askYes");
+    setText("askNoBtn", "askNo");
+    setText("tutorPrevBtn", "tutorPrev");
+    setText("tutorNextBtn", "tutorNext");
     const langLabel = t("langSwitch");
     const homeLang = document.getElementById("homeLangBtn");
     const playLang = document.getElementById("playLangBtn");
     if (homeLang) homeLang.textContent = langLabel;
     if (playLang) playLang.textContent = langLabel;
+    updateSpeedButton();
     updateHintButton();
     updateHud();
+    refreshAskTutorialButtons();
 }
 
 function setLang(next) {
@@ -1379,18 +1654,46 @@ function setLang(next) {
     if (document.getElementById("briefOverlay").classList.contains("show")) {
         fillBriefModal(briefKind);
     }
-    if (tutorialActive) applyTutorialStep();
+    if (tutorialActive) applyTutorialPage();
     if (deadlocked) applyDeadlockCopy();
+    renderLegend();
 }
 
 function toggleLang() {
     setLang(lang === "zh" ? "en" : "zh");
 }
 
+function isSlowAnim() {
+    return animSpeed === "slow";
+}
+
+function updateSpeedButton() {
+    const btn = document.getElementById("speedBtn");
+    if (!btn) return;
+    btn.textContent = isSlowAnim() ? t("speedSlow") : t("speedFast");
+}
+
+function toggleAnimSpeed() {
+    animSpeed = isSlowAnim() ? "fast" : "slow";
+    progress.animSpeed = animSpeed;
+    saveProgress();
+    updateSpeedButton();
+}
+
+function refreshAskTutorialButtons() {
+    const yesBtn = document.getElementById("askYesBtn");
+    const noBtn = document.getElementById("askNoBtn");
+    if (!yesBtn || !noBtn) return;
+    const skipDefault = !!progress.tutorialDone;
+    yesBtn.classList.toggle("ghost", skipDefault);
+    noBtn.classList.toggle("ghost", !skipDefault);
+}
+
 function overlayOpen() {
     return document.getElementById("briefOverlay").classList.contains("show") ||
         document.getElementById("winOverlay").classList.contains("show") ||
-        document.getElementById("challengeOverlay").classList.contains("show");
+        document.getElementById("challengeOverlay").classList.contains("show") ||
+        document.getElementById("askTutorialOverlay").classList.contains("show");
 }
 
 function renderHome() {
@@ -1436,9 +1739,12 @@ function renderHome() {
 
 function resetAllProgress() {
     const keepLang = progress.lang === "en" ? "en" : "zh";
+    const keepSpeed = progress.animSpeed === "slow" ? "slow" : "fast";
     progress = defaultProgress();
     progress.lang = keepLang;
+    progress.animSpeed = keepSpeed;
     lang = keepLang;
+    animSpeed = keepSpeed;
     saveProgress();
     renderHome();
 }
@@ -1744,8 +2050,12 @@ function fitPlayLayout() {
     const footer = document.querySelector("#playArea .footer");
     const legend = document.getElementById("legend");
     const wrapTop = wrap.getBoundingClientRect().top;
+    const tutorBar = document.getElementById("tutorBar");
+    const tutorH = (tutorialActive && tutorBar && !tutorBar.classList.contains("hidden"))
+        ? tutorBar.getBoundingClientRect().height
+        : 0;
     const below = (legend ? legend.getBoundingClientRect().height : 0) +
-        (footer ? footer.getBoundingClientRect().height : 0) + 16;
+        (footer ? footer.getBoundingClientRect().height : 0) + tutorH + 16;
     const available = Math.floor(window.innerHeight - wrapTop - below);
     const maxH = Math.max(120, available);
     const maxW = Math.max(120, wrap.clientWidth - 16);
@@ -1831,6 +2141,7 @@ function refreshPlayChrome() {
 
 function renderLegend() {
     const legend = document.getElementById("legend");
+    if (!legend) return;
     legend.innerHTML = "";
     const groups = catalogByClass();
     const ids = CLASS_ORDER.filter(function (classId) {
@@ -1841,17 +2152,41 @@ function renderLegend() {
     });
     ids.forEach(function (classId) {
         const info = CLASS_INFO[classId] || { zh: classId, en: classId };
+        const effect = POWER_EFFECT[classId] || { zh: "", en: "" };
+        const charge = powerCharge[classId] || 0;
+        const charged = charge >= POWER_CHARGE_COST;
         const item = document.createElement("div");
-        item.className = "legend-item";
+        item.className = "legend-item power";
+        item.dataset.classId = classId;
+        if (charged) item.classList.add("charged");
+        if (armedPower === classId) item.classList.add("armed");
         const img = document.createElement("img");
         img.src = groups[classId][0].src;
         img.alt = info.en;
-        const label = document.createElement("span");
-        label.innerHTML = info.zh + "<small>" + info.en + "</small>";
+        const copy = document.createElement("div");
+        copy.className = "power-copy";
+        const name = document.createElement("span");
+        name.className = "power-name";
+        name.textContent = lang === "en" ? info.en : info.zh;
+        const fx = document.createElement("span");
+        fx.className = "power-effect";
+        fx.textContent = lang === "en" ? effect.en : effect.zh;
+        const bar = document.createElement("span");
+        bar.className = "power-charge";
+        bar.textContent = charged
+            ? t("powerReady")
+            : t("powerCharge", { n: charge, max: POWER_CHARGE_COST });
+        copy.appendChild(name);
+        copy.appendChild(fx);
+        copy.appendChild(bar);
         item.appendChild(img);
-        item.appendChild(label);
+        item.appendChild(copy);
+        item.addEventListener("click", function () {
+            onPowerClick(classId);
+        });
         legend.appendChild(item);
     });
+    if (tutorialActive) applyTutorialFocus();
 }
 
 function swapCellContents(a, b) {
@@ -1877,13 +2212,67 @@ function playLocked() {
     return locked || paused || runEnded || deadlocked || mode === "home";
 }
 
+function clearSlideClasses(a, b) {
+    [getCell(a.r, a.c), getCell(b.r, b.c)].forEach(function (cell) {
+        if (!cell) return;
+        cell.classList.remove("slide-swap");
+        cell.style.removeProperty("--dx");
+        cell.style.removeProperty("--dy");
+        cell.style.removeProperty("--swap-ms");
+    });
+}
+
+async function animateSwapSlide(a, b) {
+    const cellA = getCell(a.r, a.c);
+    const cellB = getCell(b.r, b.c);
+    if (!cellA || !cellB) {
+        swap(a, b);
+        paintCell(a.r, a.c, true);
+        paintCell(b.r, b.c, true);
+        return;
+    }
+    const ra = cellA.getBoundingClientRect();
+    const rb = cellB.getBoundingClientRect();
+    cellA.style.setProperty("--dx", (rb.left - ra.left) + "px");
+    cellA.style.setProperty("--dy", (rb.top - ra.top) + "px");
+    cellB.style.setProperty("--dx", (ra.left - rb.left) + "px");
+    cellB.style.setProperty("--dy", (ra.top - rb.top) + "px");
+    cellA.style.setProperty("--swap-ms", SLOW_SWAP_MS + "ms");
+    cellB.style.setProperty("--swap-ms", SLOW_SWAP_MS + "ms");
+    cellA.classList.add("slide-swap");
+    cellB.classList.add("slide-swap");
+    await sleep(SLOW_SWAP_MS);
+    swap(a, b);
+    paintCell(a.r, a.c, true);
+    paintCell(b.r, b.c, true);
+    clearSlideClasses(a, b);
+}
+
+async function playSwapMotion(a, b) {
+    if (isSlowAnim()) {
+        await animateSwapSlide(a, b);
+        return;
+    }
+    const direction = swapDirection(a, b);
+    paintSwap(a, b, direction);
+    await sleep(180);
+    swap(a, b);
+    swapCellContents(a, b);
+    clearSwapClasses(a, b);
+}
+
 async function clickCell(r, c) {
     if (playLocked()) return;
     if (mode === "challenge" && timeLeft <= 0) return;
     if (tutorialBlocksCell(r, c)) return;
 
+    if (armedPower) {
+        await firePower(r, c);
+        return;
+    }
+
     const tile = board[r][c];
-    if (tile && (!tutorialActive || tutorialStep === "done")) {
+    if (tile && !tutorialActive) {
         setLesson(classLabel(tile.classId), classCopy(tile.classId, "select"));
     }
 
@@ -1911,25 +2300,17 @@ async function clickCell(r, c) {
     const first = { r: selected.r, c: selected.c };
     const second = { r: r, c: c };
     const swappingHint = isHintedSwap(first, second);
-    const direction = swapDirection(first, second);
     selected = null;
     refreshSelection();
+    clearGroupGlow();
     if (swappingHint) dismissHint();
-    paintSwap(first, second, direction);
-    await sleep(180);
-    swap(first, second);
-    swapCellContents(first, second);
-    clearSwapClasses(first, second);
+    await playSwapMotion(first, second);
 
     const matches = findMatches();
     if (matches.length === 0) {
-        const reverse = swapDirection(first, second);
-        paintSwap(first, second, reverse);
-        await sleep(180);
-        swap(first, second);
-        swapCellContents(first, second);
-        clearSwapClasses(first, second);
+        await playSwapMotion(first, second);
         failSwaps += 1;
+        maybeHintNudge();
         document.getElementById("message").textContent = t("msgRevert");
         await sleep(220);
         document.getElementById("message").textContent = t("msgSwap");
@@ -1939,11 +2320,9 @@ async function clickCell(r, c) {
 
     combo = 0;
     const fromTutorialSwap = tutorialActive && tutorialStep === "swap";
-    const fromTutorialHintSwap = tutorialActive && tutorialStep === "hintswap";
     await clearMatches();
     locked = false;
-    if (fromTutorialSwap) setTutorialStep("pop");
-    else if (fromTutorialHintSwap) completeTutorial();
+    if (fromTutorialSwap) setTutorialPageById("pop");
 }
 
 function swapDirection(a, b) {
@@ -1996,7 +2375,23 @@ function dismissHint() {
 
 function resetHintTracking() {
     failSwaps = 0;
+    secondsSinceClear = 0;
     dismissHint();
+    clearHintNudge();
+}
+
+function clearHintNudge() {
+    hintNudgeOn = false;
+    const btn = document.getElementById("hintBtn");
+    if (btn) btn.classList.remove("hint-nudge");
+}
+
+function maybeHintNudge() {
+    if (tutorialActive || paused || runEnded || deadlocked || mode === "home") return;
+    if (secondsSinceClear < HINT_NUDGE_IDLE_SEC && failSwaps < HINT_NUDGE_FAILS) return;
+    hintNudgeOn = true;
+    const btn = document.getElementById("hintBtn");
+    if (btn) btn.classList.add("hint-nudge");
 }
 
 function findValidSwaps() {
@@ -2198,7 +2593,7 @@ function refreshDeadBoard() {
     hideDeadlock();
     announceReshuffle();
     if (tutorialActive) paintTutorialLocks();
-    if (!paused && !overlayOpen()) startPlayClock();
+    if (!paused && !overlayOpen() && !tutorialActive) startPlayClock();
     updateHintButton();
     fitPlayLayout();
     return true;
@@ -2225,12 +2620,12 @@ function revealHintPair() {
 }
 
 function tutorialHintIsFree() {
-    return tutorialActive && tutorialStep === "hint";
+    return tutorialActive;
 }
 
 function hintAllowed() {
     if (mode === "home" || paused || runEnded || locked || deadlocked || overlayOpen()) return false;
-    if (tutorialActive && tutorialStep !== "hint" && tutorialStep !== "done") return false;
+    if (tutorialActive && tutorialStep !== "hint") return false;
     return true;
 }
 
@@ -2245,6 +2640,7 @@ function updateHintButton() {
     }
     const needCharge = !tutorialHintIsFree();
     btn.disabled = !hintAllowed() || (needCharge && hintCharges <= 0);
+    btn.classList.toggle("hint-nudge", hintNudgeOn);
 }
 
 function tickHintRefill() {
@@ -2292,8 +2688,9 @@ function useHint() {
         hintCharges -= 1;
         hintUses += 1;
     }
+    clearGroupGlow();
+    clearHintNudge();
     updateHintButton();
-    if (tutorialActive && tutorialStep === "hint") setTutorialStep("hintswap");
 }
 
 function useChallengeHint() {
@@ -2500,88 +2897,134 @@ async function animateGravity(moves, spawns) {
     });
 }
 
+function uniquePositions(list) {
+    const seen = {};
+    const out = [];
+    list.forEach(function (pos) {
+        if (!pos) return;
+        const key = pos.r + "," + pos.c;
+        if (seen[key]) return;
+        seen[key] = true;
+        out.push({ r: pos.r, c: pos.c });
+    });
+    return out;
+}
+
+function grantPowerCharge(classId) {
+    if (!classId) return;
+    powerCharge[classId] = Math.min(POWER_CHARGE_COST, (powerCharge[classId] || 0) + 1);
+}
+
+function resetPowers() {
+    powerCharge = {};
+    CLASS_ORDER.forEach(function (id) { powerCharge[id] = 0; });
+    armedPower = null;
+    clearGroupGlow();
+}
+
+async function shatterPositions(positions) {
+    const cells = uniquePositions(positions).filter(function (pos) {
+        return board[pos.r] && board[pos.r][pos.c];
+    });
+    if (!cells.length) return;
+    cells.forEach(function (pos) {
+        const cell = getCell(pos.r, pos.c);
+        if (cell) cell.classList.add("popping");
+    });
+    await sleep(280);
+    cells.forEach(function (pos) {
+        const cell = getCell(pos.r, pos.c);
+        if (!cell) return;
+        cell.classList.remove("popping");
+        cell.classList.add("shattering");
+        burstShards(cell);
+        createParticles(cell);
+    });
+    await sleep(480);
+    cells.forEach(function (pos) {
+        board[pos.r][pos.c] = null;
+        const cell = getCell(pos.r, pos.c);
+        if (!cell) return;
+        cell.classList.remove("popping", "shattering", "spawning", "falling-tile", "hint", "power-glow");
+        cell.innerHTML = "";
+        cell.dataset.tileId = "";
+        cell.removeAttribute("title");
+    });
+}
+
+async function refillAfterClear() {
+    const gravity = planGravity();
+    if (gravity.error) {
+        showStatus(
+            "error",
+            "Not enough unique images",
+            "棋盘需要的不重复图像多于目录中的唯一文件。"
+        );
+        return false;
+    }
+    if (!uniqueImageCountOnBoard()) {
+        console.error("Duplicate image file detected on the board");
+    }
+    await animateGravity(gravity.moves, gravity.spawns);
+    return true;
+}
+
+function creditClearWave(matches) {
+    combo += 1;
+    const matchedClass = board[matches[0].r][matches[0].c].classId;
+    const info = CLASS_INFO[matchedClass];
+    const baseScore = matches.length * 10;
+    const comboBonus = combo > 1 ? combo * 25 : 0;
+    addScore(baseScore + comboBonus);
+    addTimeBonus();
+    clearsDone += 1;
+    grantChallengeHintProgress();
+    const seen = {};
+    matches.forEach(function (pos) {
+        const tile = board[pos.r][pos.c];
+        if (!tile || seen[tile.classId]) return;
+        seen[tile.classId] = true;
+        grantPowerCharge(tile.classId);
+    });
+    updateHud();
+    pulseScore();
+    renderLegend();
+
+    if (!tutorialActive) {
+        setLesson("Match · " + classLabel(matchedClass), classCopy(matchedClass, "match"));
+    }
+
+    if (mode === "challenge") {
+        const name = info ? (lang === "en" ? info.en : info.zh) : matchedClass;
+        if (combo === 1) {
+            document.getElementById("message").textContent =
+                t("msgChallengeClear", { n: matches.length, name: name, bonus: TIME_BONUS });
+        } else {
+            document.getElementById("message").textContent =
+                t("msgChallengeCombo", { combo: combo, points: comboBonus, bonus: TIME_BONUS });
+        }
+    } else {
+        document.getElementById("message").textContent =
+            t("msgCleared", { n: clearsDone, goal: CLEARS_TO_WIN });
+    }
+
+    if (combo >= 2) showCombo(combo);
+    document.getElementById("combo").textContent = String(combo);
+    if (mode === "challenge") showTimeBonus(matches);
+}
+
 async function clearMatches() {
-    resetHintTracking();
+    let credited = false;
     while (!runEnded) {
         const matches = findMatches();
         if (matches.length === 0) break;
-
-        combo += 1;
-        const matchedClass = board[matches[0].r][matches[0].c].classId;
-        const info = CLASS_INFO[matchedClass];
-        const baseScore = matches.length * 10;
-        const comboBonus = combo > 1 ? combo * 25 : 0;
-        addScore(baseScore + comboBonus);
-        addTimeBonus();
-        clearsDone += 1;
-        grantChallengeHintProgress();
-        updateHud();
-        pulseScore();
-
-        if (!tutorialActive) {
-            setLesson("Match · " + classLabel(matchedClass), classCopy(matchedClass, "match"));
+        if (!credited) {
+            resetHintTracking();
+            credited = true;
         }
-
-        if (mode === "challenge") {
-            const name = info ? (lang === "en" ? info.en : info.zh) : matchedClass;
-            if (combo === 1) {
-                document.getElementById("message").textContent =
-                    t("msgChallengeClear", { n: matches.length, name: name, bonus: TIME_BONUS });
-            } else {
-                document.getElementById("message").textContent =
-                    t("msgChallengeCombo", { combo: combo, points: comboBonus, bonus: TIME_BONUS });
-            }
-        } else {
-            document.getElementById("message").textContent =
-                t("msgCleared", { n: clearsDone, goal: CLEARS_TO_WIN });
-        }
-
-        if (combo >= 2) showCombo(combo);
-        document.getElementById("combo").textContent = String(combo);
-
-        matches.forEach(function (pos) {
-            const cell = getCell(pos.r, pos.c);
-            if (cell) cell.classList.add("popping");
-        });
-        if (mode === "challenge") showTimeBonus(matches);
-        await sleep(280);
-
-        matches.forEach(function (pos) {
-            const cell = getCell(pos.r, pos.c);
-            if (!cell) return;
-            cell.classList.remove("popping");
-            cell.classList.add("shattering");
-            burstShards(cell);
-            createParticles(cell);
-        });
-        await sleep(480);
-
-        matches.forEach(function (pos) {
-            board[pos.r][pos.c] = null;
-            const cell = getCell(pos.r, pos.c);
-            if (!cell) return;
-            cell.classList.remove("popping", "shattering", "spawning", "falling-tile", "hint");
-            cell.innerHTML = "";
-            cell.dataset.tileId = "";
-            cell.removeAttribute("title");
-        });
-
-        const gravity = planGravity();
-        if (gravity.error) {
-            showStatus(
-                "error",
-                "Not enough unique images",
-                "棋盘需要的不重复图像多于目录中的唯一文件。"
-            );
-            return;
-        }
-
-        if (!uniqueImageCountOnBoard()) {
-            console.error("Duplicate image file detected on the board");
-        }
-
-        await animateGravity(gravity.moves, gravity.spawns);
-
+        creditClearWave(matches);
+        await shatterPositions(matches);
+        if (!(await refillAfterClear())) return;
         if (mode === "campaign" && clearsDone >= CLEARS_TO_WIN) {
             finishCampaignWin();
             return;
@@ -2593,6 +3036,174 @@ async function clearMatches() {
         setTimeout(function () {
             if (!runEnded) document.getElementById("message").textContent = t("msgSwap");
         }, 400);
+    }
+}
+
+function onPowerClick(classId) {
+    if (playLocked() || tutorialActive) return;
+    if ((powerCharge[classId] || 0) < POWER_CHARGE_COST) {
+        document.getElementById("message").textContent = t("msgPowerNeedCharge", { n: POWER_CHARGE_COST });
+        return;
+    }
+    if (armedPower === classId) {
+        armedPower = null;
+        renderLegend();
+        document.getElementById("message").textContent = t("msgSwap");
+        return;
+    }
+    armedPower = classId;
+    selected = null;
+    refreshSelection();
+    renderLegend();
+    document.getElementById("message").textContent = t("msgPowerArmed");
+}
+
+function ringPositions(r, c) {
+    const deltas = [
+        [-1, 0], [-1, 1], [0, 1], [1, 1],
+        [1, 0], [1, -1], [0, -1], [-1, -1]
+    ];
+    const out = [];
+    deltas.forEach(function (d) {
+        const rr = r + d[0];
+        const cc = c + d[1];
+        if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) out.push({ r: rr, c: cc });
+    });
+    return out;
+}
+
+function neighborhoodPositions(r, c) {
+    const out = [];
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            const rr = r + dr;
+            const cc = c + dc;
+            if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) out.push({ r: rr, c: cc });
+        }
+    }
+    return out;
+}
+
+function shuffleArray(list) {
+    for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
+    }
+    return list;
+}
+
+function paintPowerGlow() {
+    document.querySelectorAll("#board .cell.power-glow").forEach(function (cell) {
+        cell.classList.remove("power-glow");
+    });
+    if (!groupGlowClass) return;
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c] && board[r][c].classId === groupGlowClass) {
+                const cell = getCell(r, c);
+                if (cell) cell.classList.add("power-glow");
+            }
+        }
+    }
+}
+
+function clearGroupGlow() {
+    groupGlowClass = null;
+    paintPowerGlow();
+}
+
+async function rotateRingClockwise(r, c) {
+    const pos = ringPositions(r, c);
+    if (pos.length < 2) return;
+    const tiles = pos.map(function (p) { return board[p.r][p.c]; });
+    const rotated = tiles.map(function (_, i) {
+        return tiles[(i - 1 + tiles.length) % tiles.length];
+    });
+    pos.forEach(function (p, i) {
+        board[p.r][p.c] = rotated[i];
+        paintCell(p.r, p.c, true);
+        const cell = getCell(p.r, p.c);
+        if (cell) cell.classList.add("shuffle-wobble");
+    });
+    await sleep(isSlowAnim() ? 560 : 320);
+    pos.forEach(function (p) {
+        const cell = getCell(p.r, p.c);
+        if (cell) cell.classList.remove("shuffle-wobble");
+    });
+}
+
+async function shuffleNeighborhood(r, c) {
+    const pos = neighborhoodPositions(r, c);
+    if (pos.length < 2) return;
+    const before = pos.map(function (p) { return board[p.r][p.c]; });
+    let next = before.slice();
+    for (let i = 0; i < 8; i++) {
+        next = shuffleArray(before.slice());
+        const same = next.every(function (tile, idx) { return tile === before[idx]; });
+        if (!same) break;
+    }
+    pos.forEach(function (p, i) {
+        board[p.r][p.c] = next[i];
+        paintCell(p.r, p.c, true);
+        const cell = getCell(p.r, p.c);
+        if (cell) cell.classList.add("shuffle-wobble");
+    });
+    await sleep(isSlowAnim() ? 620 : 360);
+    pos.forEach(function (p) {
+        const cell = getCell(p.r, p.c);
+        if (cell) cell.classList.remove("shuffle-wobble");
+    });
+}
+
+async function firePower(r, c) {
+    const classId = armedPower;
+    if (!classId) return;
+    if ((powerCharge[classId] || 0) < POWER_CHARGE_COST) return;
+    if (!board[r] || !board[r][c]) return;
+    locked = true;
+    powerCharge[classId] = 0;
+    armedPower = null;
+    selected = null;
+    refreshSelection();
+    renderLegend();
+    if (classId !== "Group") clearGroupGlow();
+
+    try {
+        if (classId === "FaceOnSpirals") {
+            await rotateRingClockwise(r, c);
+            document.getElementById("message").textContent = t("msgPowerRotate");
+            combo = 0;
+            await clearMatches();
+        } else if (classId === "EdgeOnDisk") {
+            const row = [];
+            for (let cc = 0; cc < COLS; cc++) row.push({ r: r, c: cc });
+            document.getElementById("message").textContent = t("msgPowerRow");
+            await shatterPositions(row);
+            if (!(await refillAfterClear())) return;
+            combo = 0;
+            await clearMatches();
+        } else if (classId === "Irregular") {
+            await shuffleNeighborhood(r, c);
+            document.getElementById("message").textContent = t("msgPowerShuffle");
+            combo = 0;
+            await clearMatches();
+        } else if (classId === "Elliptical") {
+            document.getElementById("message").textContent = t("msgPowerSingle");
+            await shatterPositions([{ r: r, c: c }]);
+            if (!(await refillAfterClear())) return;
+            combo = 0;
+            await clearMatches();
+        } else if (classId === "Group") {
+            groupGlowClass = board[r][c].classId;
+            paintPowerGlow();
+            document.getElementById("message").textContent = t("msgPowerGroup");
+        }
+    } finally {
+        locked = false;
+        renderLegend();
+        if (tutorialActive) applyTutorialPage();
     }
 }
 
@@ -2685,6 +3296,7 @@ function hideOverlays() {
     document.getElementById("briefOverlay").classList.remove("show");
     document.getElementById("winOverlay").classList.remove("show");
     document.getElementById("challengeOverlay").classList.remove("show");
+    document.getElementById("askTutorialOverlay").classList.remove("show");
     hideDeadlock();
 }
 
@@ -2731,12 +3343,7 @@ function campaignStarItems() {
 function fillBriefModal(kind) {
     briefKind = kind;
     const skipRow = document.getElementById("skipTutorialRow");
-    const showSkip = kind === "enter" && currentLevelId === "easy" && progress.tutorialDone;
-    if (skipRow) skipRow.classList.toggle("hidden", !showSkip);
-    if (showSkip) {
-        const box = document.getElementById("skipTutorial");
-        if (box) box.checked = true;
-    }
+    if (skipRow) skipRow.classList.add("hidden");
 
     document.getElementById("briefClearsLabel").textContent =
         mode === "challenge" ? t("finalScore") : t("briefClearsLabel");
@@ -2798,30 +3405,16 @@ function pauseRun() {
 
 function resumeFromBrief() {
     if (runEnded) return;
-    const skipBox = document.getElementById("skipTutorial");
-    skipTutorialThisRun = !!(
-        currentLevelId === "easy" &&
-        progress.tutorialDone &&
-        skipBox && skipBox.checked
-    );
+    if (document.getElementById("askTutorialOverlay").classList.contains("show")) return;
     document.getElementById("briefOverlay").classList.remove("show");
-    paused = false;
-
-    if (mode === "campaign" && currentLevelId === "easy" && briefKind === "enter") {
-        if (skipTutorialThisRun) {
-            tutorialActive = false;
-            tutorialStep = null;
-            paintTutorialLocks();
-            setCoachNextVisible(false);
-        } else {
-            if (!tutorialActive) prepareBoard({ tutorial: true });
-            beginTutorial();
-        }
-    } else if (tutorialActive && tutorialStep === "pause" && tutorialPauseOpened) {
-        tutorialPauseOpened = false;
-        setTutorialStep("hint");
+    if (tutorialActive) {
+        paused = false;
+        applyTutorialPage();
+        updateHintButton();
+        fitPlayLayout();
+        return;
     }
-
+    paused = false;
     if (!deadlocked) startPlayClock();
     updateHintButton();
     fitPlayLayout();
@@ -2830,6 +3423,8 @@ function resumeFromBrief() {
 function tickPlayClock() {
     if (paused || runEnded || deadlocked) return;
     if (tutorialActive) return;
+    secondsSinceClear += 1;
+    maybeHintNudge();
     tickHintRefill();
     if (mode === "challenge") {
         timeLeft -= 1;
@@ -2848,7 +3443,7 @@ function tickPlayClock() {
 
 function startPlayClock() {
     stopClocks();
-    if (deadlocked || paused || runEnded) return;
+    if (deadlocked || paused || runEnded || tutorialActive) return;
     timer = setInterval(tickPlayClock, 1000);
 }
 
@@ -2865,8 +3460,13 @@ function prepareBoard(opts) {
     imageErrors = 0;
     combo = 0;
     failSwaps = 0;
+    secondsSinceClear = 0;
+    hintNudgeOn = false;
     hintPair = null;
+    resetPowers();
     clearHintClasses();
+    clearHintNudge();
+    clearGroupGlow();
     document.getElementById("score").classList.remove("score-pop");
     document.getElementById("message").textContent = t("msgSwap");
 
@@ -2944,8 +3544,11 @@ function goHome() {
     currentLevelId = null;
     tutorialActive = false;
     tutorialStep = null;
+    tutorialPage = 0;
+    armedPower = null;
     stopClocks();
     hideDeadlock();
+    hideTutorUi();
     hideOverlays();
     document.body.classList.remove("playing");
     document.getElementById("gameShell").classList.add("hidden");
@@ -2976,8 +3579,10 @@ function startCampaign(levelId) {
     elapsedSec = 0;
     timeLeft = 0;
     resetRunHints();
+    resetPowers();
     tutorialActive = false;
     tutorialStep = null;
+    tutorialPage = 0;
     skipTutorialThisRun = false;
     document.getElementById("playTitle").textContent = levelTitle(levelId);
     document.getElementById("pauseBtn").classList.remove("hidden");
@@ -2986,10 +3591,16 @@ function startCampaign(levelId) {
         t("campaignLesson", { copy: levelCopy(levelId), n: CLEARS_TO_WIN })
     );
     setCoachNextVisible(false);
+    hideTutorUi();
     showGameShell();
-    const wantTutorial = levelId === "easy" && !progress.tutorialDone;
-    if (!prepareBoard({ tutorial: wantTutorial })) return;
-    if (wantTutorial) tutorialActive = true;
+    updateSpeedButton();
+    if (levelId === "easy") {
+        refreshAskTutorialButtons();
+        document.getElementById("askTutorialOverlay").classList.add("show");
+        updateHintButton();
+        return;
+    }
+    if (!prepareBoard({ tutorial: false })) return;
     updateHintButton();
     showBrief("enter");
 }
@@ -3007,8 +3618,10 @@ function startChallenge() {
     elapsedSec = 0;
     timeLeft = GAME_TIME;
     resetRunHints();
+    resetPowers();
     tutorialActive = false;
     tutorialStep = null;
+    tutorialPage = 0;
     document.getElementById("playTitle").textContent = t("challengeTitle");
     document.getElementById("pauseBtn").classList.remove("hidden");
     setLesson(t("howToPlay"), t("challengeLesson", { bonus: TIME_BONUS }));
@@ -3108,7 +3721,7 @@ function sleep(ms) {
 }
 
 function tutorialBlocksCell(r, c) {
-    if (!tutorialActive || tutorialStep === "done") return false;
+    if (!tutorialActive) return false;
     if (!tutorialAllowCells || tutorialAllowCells === "all") return false;
     if (tutorialAllowCells === "none") return true;
     return !tutorialAllowCells.some(function (pos) {
@@ -3122,7 +3735,7 @@ function paintTutorialLocks() {
         const c = Number(cell.dataset.c);
         let on = false;
         let off = false;
-        if (tutorialActive && tutorialStep && tutorialStep !== "done") {
+        if (tutorialActive && tutorialStep) {
             if (!tutorialAllowCells || tutorialAllowCells === "none") {
                 off = true;
             } else if (tutorialAllowCells === "all") {
@@ -3138,13 +3751,201 @@ function paintTutorialLocks() {
     });
 }
 
-function applyTutorialStep() {
-    const nextOn = tutorialStep === "class" || tutorialStep === "pop" || tutorialStep === "gravity";
-    setCoachNextVisible(nextOn);
-    if (tutorialStep === "class") {
+function hideTutorUi() {
+    ["tutorMask", "tutorHole", "tutorCallout", "tutorBar"].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add("hidden");
+    });
+    document.querySelectorAll(".tutor-focus").forEach(function (el) {
+        el.classList.remove("tutor-focus");
+    });
+    const lesson = document.getElementById("lesson");
+    if (lesson) lesson.classList.remove("hidden");
+}
+
+function unionRect(nodes) {
+    let left = Infinity;
+    let top = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+    let found = false;
+    nodes.forEach(function (el) {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (!r.width && !r.height) return;
+        found = true;
+        left = Math.min(left, r.left);
+        top = Math.min(top, r.top);
+        right = Math.max(right, r.right);
+        bottom = Math.max(bottom, r.bottom);
+    });
+    if (!found) return null;
+    return { left: left, top: top, right: right, bottom: bottom, width: right - left, height: bottom - top };
+}
+
+function setTutorHole(rect) {
+    const hole = document.getElementById("tutorHole");
+    const mask = document.getElementById("tutorMask");
+    if (!hole || !mask) return;
+    if (!rect) {
+        hole.classList.add("hidden");
+        mask.classList.remove("hidden");
+        return;
+    }
+    mask.classList.add("hidden");
+    hole.classList.remove("hidden");
+    hole.style.left = (rect.left - 8) + "px";
+    hole.style.top = (rect.top - 8) + "px";
+    hole.style.width = (rect.width + 16) + "px";
+    hole.style.height = (rect.height + 16) + "px";
+}
+
+function placeCallout(rect, html, showEnd) {
+    const el = document.getElementById("tutorCallout");
+    if (!el) return;
+    el.classList.remove("hidden");
+    el.innerHTML = html;
+    if (showEnd) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn tutor-end";
+        btn.textContent = t("tutorEnd");
+        btn.onclick = completeTutorial;
+        el.appendChild(btn);
+    }
+    const pad = 14;
+    let left = rect ? rect.right + pad : 24;
+    let top = rect ? rect.top : 88;
+    requestAnimationFrame(function () {
+        const box = el.getBoundingClientRect();
+        if (left + box.width > window.innerWidth - 12) {
+            left = Math.max(12, (rect ? rect.left : 24) - box.width - pad);
+        }
+        if (left < 12) left = 12;
+        if (top + box.height > window.innerHeight - 88) {
+            top = Math.max(12, window.innerHeight - box.height - 88);
+        }
+        el.style.left = left + "px";
+        el.style.top = top + "px";
+    });
+}
+
+function applyTutorialFocus() {
+    document.querySelectorAll(".tutor-focus").forEach(function (el) {
+        el.classList.remove("tutor-focus");
+    });
+    if (!tutorialActive) return;
+    const targets = [];
+    const step = tutorialStep;
+    if (step === "class") {
+        [[0, 0], [0, 1], [1, 2]].forEach(function (rc) {
+            const cell = getCell(rc[0], rc[1]);
+            if (cell) targets.push(cell);
+        });
+    } else if (step === "swap") {
+        [tutorialSwapCellA, tutorialSwapCellB].forEach(function (pos) {
+            const cell = getCell(pos.r, pos.c);
+            if (cell) targets.push(cell);
+        });
+    } else if (step === "pop" || step === "gravity") {
+        [[0, 0], [0, 1], [0, 2]].forEach(function (rc) {
+            const cell = getCell(rc[0], rc[1]);
+            if (cell) targets.push(cell);
+        });
+        const boardEl = document.getElementById("board");
+        if (step === "gravity" && boardEl) targets.push(boardEl);
+    } else if (step === "pause") {
+        const pause = document.getElementById("pauseBtn");
+        if (pause) targets.push(pause);
+    } else if (step === "hint") {
+        const hint = document.getElementById("hintBtn");
+        if (hint) targets.push(hint);
+    } else if (step === "stars") {
+        const modal = document.querySelector("#briefOverlay .modal");
+        if (modal) targets.push(modal);
+    } else if (step && step.indexOf("power") === 0) {
+        const map = {
+            powerFace: "FaceOnSpirals",
+            powerEdge: "EdgeOnDisk",
+            powerIrregular: "Irregular",
+            powerElliptical: "Elliptical",
+            powerGroup: "Group"
+        };
+        const item = document.querySelector('#legend .legend-item[data-class-id="' + map[step] + '"]');
+        if (item) targets.push(item);
+        else {
+            const legend = document.getElementById("legend");
+            if (legend) targets.push(legend);
+        }
+    } else if (step === "finish") {
+        const boardEl = document.getElementById("board");
+        if (boardEl) targets.push(boardEl);
+    }
+    targets.forEach(function (el) { el.classList.add("tutor-focus"); });
+    const rect = unionRect(targets);
+    const copyKey = {
+        class: "tutorCallClass",
+        swap: "tutorCallSwap",
+        pop: "tutorCallPop",
+        gravity: "tutorCallGravity",
+        pause: "tutorCallPause",
+        hint: "tutorCallHint",
+        stars: "tutorCallStars",
+        powerFace: "tutorCallPowerFace",
+        powerEdge: "tutorCallPowerEdge",
+        powerIrregular: "tutorCallPowerIrregular",
+        powerElliptical: "tutorCallPowerElliptical",
+        powerGroup: "tutorCallPowerGroup",
+        finish: "tutorCallFinish"
+    }[step];
+    setTutorHole(step === "stars" ? null : rect);
+    if (step === "stars") {
+        const mask = document.getElementById("tutorMask");
+        const hole = document.getElementById("tutorHole");
+        if (mask) mask.classList.add("hidden");
+        if (hole) hole.classList.add("hidden");
+    }
+    placeCallout(rect, copyKey ? t(copyKey) : "", step === "finish");
+}
+
+function applyTutorialPage() {
+    if (!tutorialActive) {
+        hideTutorUi();
+        return;
+    }
+    const lesson = document.getElementById("lesson");
+    if (lesson) lesson.classList.add("hidden");
+    setCoachNextVisible(false);
+    const bar = document.getElementById("tutorBar");
+    const prevBtn = document.getElementById("tutorPrevBtn");
+    const nextBtn = document.getElementById("tutorNextBtn");
+    const pageLabel = document.getElementById("tutorPageLabel");
+    if (bar) bar.classList.remove("hidden");
+    if (pageLabel) pageLabel.textContent = (tutorialPage + 1) + " / " + TUTOR_PAGES.length;
+    if (prevBtn) prevBtn.disabled = tutorialPage <= 0;
+    if (nextBtn) {
+        const last = tutorialPage >= TUTOR_PAGES.length - 1;
+        nextBtn.disabled = last;
+        nextBtn.classList.remove("hidden");
+        nextBtn.textContent = t("tutorNext");
+    }
+
+    if (tutorialStep === "swap") {
+        tutorialAllowCells = [tutorialSwapCellA, tutorialSwapCellB];
+    } else if (tutorialStep === "finish") {
+        tutorialAllowCells = "all";
+    } else {
         tutorialAllowCells = "none";
-        setLesson(t("tutorClassKicker"), t("tutorClass"));
-        paintTutorialLocks();
+    }
+    if (tutorialStep === "stars") {
+        fillBriefModal("pause");
+        document.getElementById("briefOverlay").classList.add("show");
+    } else {
+        document.getElementById("briefOverlay").classList.remove("show");
+    }
+    if (tutorialActive) paused = false;
+    paintTutorialLocks();
+    if (tutorialStep === "class") {
         document.querySelectorAll("#board .cell").forEach(function (cell) {
             const r = Number(cell.dataset.r);
             const c = Number(cell.dataset.c);
@@ -3152,81 +3953,78 @@ function applyTutorialStep() {
             cell.classList.toggle("tutorial-on", teach);
             cell.classList.toggle("tutorial-off", !teach);
         });
-        return;
     }
-    if (tutorialStep === "swap") {
-        tutorialAllowCells = [tutorialSwapCellA, tutorialSwapCellB];
-        setLesson(t("tutorSwapKicker"), t("tutorSwap"));
-        paintTutorialLocks();
-        return;
-    }
-    if (tutorialStep === "pop") {
-        tutorialAllowCells = "none";
-        setLesson(t("tutorPopKicker"), t("tutorPop"));
-        paintTutorialLocks();
-        return;
-    }
-    if (tutorialStep === "gravity") {
-        tutorialAllowCells = "none";
-        setLesson(t("tutorGravityKicker"), t("tutorGravity"));
-        paintTutorialLocks();
-        return;
-    }
-    if (tutorialStep === "pause") {
-        tutorialAllowCells = "none";
-        setLesson(t("tutorPauseKicker"), t("tutorPause"));
-        paintTutorialLocks();
-        return;
-    }
-    if (tutorialStep === "hint") {
-        tutorialAllowCells = "none";
-        setLesson(t("tutorHintKicker"), t("tutorHint"));
-        paintTutorialLocks();
-        updateHintButton();
-        return;
-    }
-    if (tutorialStep === "hintswap") {
-        tutorialAllowCells = hintPair
-            ? [hintPair.a, hintPair.b]
-            : "none";
-        setLesson(t("tutorHintSwapKicker"), t("tutorHintSwap"));
-        paintTutorialLocks();
-        return;
-    }
-    tutorialAllowCells = "all";
-    paintTutorialLocks();
     updateHintButton();
+    applyTutorialFocus();
+    fitPlayLayout();
+}
+
+function setTutorialPage(index) {
+    tutorialPage = Math.max(0, Math.min(TUTOR_PAGES.length - 1, index));
+    tutorialStep = TUTOR_PAGES[tutorialPage];
+    applyTutorialPage();
+}
+
+function setTutorialPageById(id) {
+    const idx = TUTOR_PAGES.indexOf(id);
+    if (idx >= 0) setTutorialPage(idx);
 }
 
 function setTutorialStep(step) {
-    tutorialStep = step;
-    applyTutorialStep();
+    setTutorialPageById(step);
 }
 
 function beginTutorial() {
     tutorialActive = true;
     tutorialPauseOpened = false;
-    setTutorialStep("class");
+    paused = false;
+    stopClocks();
+    setTutorialPage(0);
+}
+
+function answerTutorial(yes) {
+    document.getElementById("askTutorialOverlay").classList.remove("show");
+    if (yes) {
+        if (!prepareBoard({ tutorial: true })) return;
+        beginTutorial();
+        updateHintButton();
+        return;
+    }
+    tutorialActive = false;
+    hideTutorUi();
+    if (!prepareBoard({ tutorial: false })) return;
+    updateHintButton();
+    showBrief("enter");
+}
+
+function tutorialPrev() {
+    if (!tutorialActive) return;
+    setTutorialPage(tutorialPage - 1);
 }
 
 function tutorialNext() {
     if (!tutorialActive) return;
-    if (tutorialStep === "class") setTutorialStep("swap");
-    else if (tutorialStep === "pop") setTutorialStep("gravity");
-    else if (tutorialStep === "gravity") setTutorialStep("pause");
+    if (tutorialPage >= TUTOR_PAGES.length - 1) return;
+    setTutorialPage(tutorialPage + 1);
 }
 
 function completeTutorial() {
-    tutorialStep = "done";
+    tutorialStep = null;
     tutorialActive = false;
+    tutorialPage = 0;
     tutorialAllowCells = "all";
     progress.tutorialDone = true;
     saveProgress();
+    hideTutorUi();
+    document.getElementById("briefOverlay").classList.remove("show");
     setCoachNextVisible(false);
     setLesson(t("tutorDoneKicker"), t("tutorDone"));
     paintTutorialLocks();
     document.getElementById("message").textContent = t("msgSwap");
+    paused = false;
+    if (!deadlocked) startPlayClock();
     updateHintButton();
+    fitPlayLayout();
 }
 
 function buildTutorialBoard() {
@@ -3269,9 +4067,13 @@ function onKeyDown(event) {
 
 progress = loadProgress();
 lang = progress.lang === "en" ? "en" : "zh";
+animSpeed = progress.animSpeed === "slow" ? "slow" : "fast";
 applyStaticLang();
 renderHome();
-window.addEventListener("resize", fitPlayLayout);
+window.addEventListener("resize", function () {
+    fitPlayLayout();
+    if (tutorialActive) applyTutorialFocus();
+});
 window.addEventListener("keydown", onKeyDown);
 </script>
 </body>

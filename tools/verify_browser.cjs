@@ -185,29 +185,53 @@ async function main() {
 
         await cdp.eval("startCampaign('easy')");
         await sleep(400);
+        const ask = await cdp.eval(`({
+            ask: document.getElementById("askTutorialOverlay").classList.contains("show"),
+            brief: document.getElementById("briefOverlay").classList.contains("show"),
+            tutorial: tutorialActive,
+            yesGhost: document.getElementById("askYesBtn").classList.contains("ghost"),
+            noGhost: document.getElementById("askNoBtn").classList.contains("ghost"),
+            speedLeftOfHint: (function () {
+                const speed = document.getElementById("speedBtn").getBoundingClientRect();
+                const hint = document.getElementById("hintBtn").getBoundingClientRect();
+                return speed.right <= hint.left + 1;
+            })(),
+            powerCost: POWER_CHARGE_COST
+        })`);
+        if (!ask.ask) throw new Error("Easy should ask about the tutorial first");
+        if (ask.brief) throw new Error("level intro must wait until the player answers the tutorial ask");
+        if (ask.tutorial) throw new Error("tutorial should not start before Yes");
+        if (ask.yesGhost || !ask.noGhost) throw new Error("first run should default to taking the tutorial");
+        if (!ask.speedLeftOfHint) throw new Error("speed toggle should sit immediately left of the hint button");
+        if (ask.powerCost !== 5) throw new Error("POWER_CHARGE_COST should be 5");
+        report.push("enter Easy: ask-first overlay, speed left of hint, power cost 5");
+
+        await cdp.eval("answerTutorial(true)");
+        await sleep(400);
         const intro = await cdp.eval(`({
             brief: document.getElementById("briefOverlay").classList.contains("show"),
-            clears: document.getElementById("briefClears").textContent,
-            elapsed: document.getElementById("briefElapsed").textContent,
-            stars: document.getElementById("briefStars").innerText,
             cols: COLS,
             rows: ROWS,
             cells: document.querySelectorAll("#board .cell").length,
             skipHidden: document.getElementById("skipTutorialRow").classList.contains("hidden"),
-            tutorial: tutorialActive
+            tutorial: tutorialActive,
+            step: tutorialStep,
+            mask: !document.getElementById("tutorMask").classList.contains("hidden") || !document.getElementById("tutorHole").classList.contains("hidden"),
+            bar: !document.getElementById("tutorBar").classList.contains("hidden"),
+            page: document.getElementById("tutorPageLabel").textContent,
+            prevDisabled: document.getElementById("tutorPrevBtn").disabled,
+            callout: document.getElementById("tutorCallout").innerHTML
         })`);
-        if (!intro.brief) throw new Error("intro modal missing");
-        if (!intro.clears.includes("0 / 20")) throw new Error("intro should show 0 / 20");
-        if (!intro.stars.includes("通关本关") || !intro.stars.includes("60") || !intro.stars.includes("提示不超过 1") || !intro.stars.includes("10 秒")) {
-            throw new Error("intro missing Easy star conditions " + intro.stars);
+        if (intro.brief) throw new Error("Yes should skip the normal intro and start the guided tutorial");
+        if (!intro.tutorial || intro.step !== "class") throw new Error("Yes should start on the class page");
+        if (!intro.mask || !intro.bar) throw new Error("tutorial should show a mask and bottom bar");
+        if (!String(intro.page).replace(/\s/g, "").includes("1/" + "13") && intro.page.replace(/\s/g, "") !== "1/13") {
+            if (intro.page.replace(/\s/g, "") !== "1/13") throw new Error("page indicator should be 1 / 13, got " + intro.page);
         }
-        if (!intro.skipHidden) throw new Error("first run must not offer skip tutorial");
-        if (!intro.tutorial) throw new Error("first Easy run should arm the tutorial");
+        if (!intro.prevDisabled) throw new Error("Back should be disabled on page 1");
+        if (!intro.callout.includes("<u>") || !intro.skipHidden) throw new Error("callout should underline key words");
         if (intro.cols !== 6 || intro.rows !== 4 || intro.cells !== 24) throw new Error("Easy board should be 6x4");
-        report.push("enter Easy: intro modal, 0/20, 60s, no skip, 6x4 board");
-
-        await cdp.eval("resumeFromBrief()");
-        await sleep(200);
+        report.push("tutorial Yes: mask, 1/13, Back disabled, 6x4 board, no intro modal");
 
         const tutorialLock = await cdp.eval(`(async function () {
             const step0 = tutorialStep;
@@ -216,14 +240,51 @@ async function main() {
             tutorialNext();
             const step1 = tutorialStep;
             const hintHidden = document.getElementById("hintBtn").classList.contains("hidden");
-            return { step0: step0, blocked: blocked, step1: step1, hintHidden: hintHidden, off: document.querySelectorAll("#board .cell.tutorial-off").length };
+            const pages = TUTOR_PAGES.slice();
+            return { step0: step0, blocked: blocked, step1: step1, hintHidden: hintHidden, off: document.querySelectorAll("#board .cell.tutorial-off").length, pages: pages };
         })()`);
         if (tutorialLock.step0 !== "class") throw new Error("tutorial should start on class step");
         if (tutorialLock.blocked) throw new Error("tutorial class step should ignore other tiles");
         if (tutorialLock.step1 !== "swap") throw new Error("Next should advance to swap");
         if (tutorialLock.hintHidden) throw new Error("hint button should be visible in campaign");
         if (tutorialLock.off < 1) throw new Error("non-taught tiles should be dimmed");
-        report.push("tutorial: class step locks other tiles, Next goes to swap, hint button visible");
+        if (tutorialLock.pages.indexOf("hint") < 0 || tutorialLock.pages[tutorialLock.pages.indexOf("hint") + 1] !== "stars") {
+            throw new Error("star page must follow the hint page " + JSON.stringify(tutorialLock.pages));
+        }
+        report.push("tutorial: class step locks other tiles, Next goes to swap, stars after hint");
+
+        const guided = await cdp.eval(`(function () {
+            setTutorialPageById("hint");
+            tutorialNext();
+            const stars = {
+                step: tutorialStep,
+                brief: document.getElementById("briefOverlay").classList.contains("show"),
+                copy: document.getElementById("tutorCallout").innerHTML
+            };
+            setTutorialPageById("finish");
+            const endBtn = document.querySelector("#tutorCallout .tutor-end");
+            const nextBtn = document.getElementById("tutorNextBtn");
+            const finish = {
+                step: tutorialStep,
+                hasEnd: !!endBtn,
+                endText: endBtn ? endBtn.textContent : "",
+                nextText: nextBtn ? nextBtn.textContent : "",
+                nextDisabled: nextBtn ? nextBtn.disabled : false,
+                sameParent: !!(endBtn && nextBtn && endBtn.parentElement === nextBtn.parentElement)
+            };
+            setTutorialPageById("swap");
+            return { stars: stars, finish: finish };
+        })()`);
+        if (guided.stars.step !== "stars" || !guided.stars.brief) {
+            throw new Error("page after hint should open the pause modal for star rules " + JSON.stringify(guided.stars));
+        }
+        if (!guided.stars.copy.includes("9") || !guided.stars.copy.includes("<u>")) {
+            throw new Error("star page should explain 9 stars with underlined keywords " + guided.stars.copy);
+        }
+        if (!guided.finish.hasEnd || guided.finish.endText !== "结束教程" || guided.finish.nextText !== "下一步" || !guided.finish.nextDisabled || guided.finish.sameParent) {
+            throw new Error("End tutorial must sit apart from Next " + JSON.stringify(guided.finish));
+        }
+        report.push("tutorial: star page after hint; End tutorial is not in the Next slot");
 
         const tutorFreeze = await cdp.eval(`(function () {
             const startTime = elapsedSec;
@@ -541,14 +602,15 @@ async function main() {
         await cdp.eval("goHome(); startCampaign('easy')");
         await sleep(250);
         const skipDefault = await cdp.eval(`({
-            hidden: document.getElementById("skipTutorialRow").classList.contains("hidden"),
-            checked: document.getElementById("skipTutorial").checked,
+            ask: document.getElementById("askTutorialOverlay").classList.contains("show"),
+            yesGhost: document.getElementById("askYesBtn").classList.contains("ghost"),
+            noGhost: document.getElementById("askNoBtn").classList.contains("ghost"),
             done: progress.tutorialDone
         })`);
-        if (skipDefault.hidden || !skipDefault.checked || !skipDefault.done) {
-            throw new Error("after first completion skip should show and be checked " + JSON.stringify(skipDefault));
+        if (!skipDefault.ask || !skipDefault.yesGhost || skipDefault.noGhost || !skipDefault.done) {
+            throw new Error("after first completion No should be the default on the ask overlay " + JSON.stringify(skipDefault));
         }
-        report.push("Easy skip tutorial: shown and checked by default after first completion");
+        report.push("Easy skip tutorial: ask-first, No is the default after first completion");
 
         await cdp.eval("goHome()");
         await sleep(200);
@@ -759,19 +821,46 @@ async function main() {
         report.push("reload keeps console challenge unlock");
 
         await cdp.eval("resetAllProgress()");
-        await cdp.eval("startCampaign('easy'); resumeFromBrief()");
+        await cdp.eval("startCampaign('easy'); answerTutorial(true)");
         await sleep(200);
         await cdp.eval("completeTutorial()");
         const afterTutor = await cdp.eval("({done: progress.tutorialDone, step: tutorialStep, active: tutorialActive})");
         if (!afterTutor.done || afterTutor.active) throw new Error("completeTutorial should unlock and persist");
         report.push("tutorial unlock persists in localStorage");
 
-        await cdp.eval("goHome(); startCampaign('easy'); resumeFromBrief()");
+        await cdp.eval("goHome(); startCampaign('easy'); answerTutorial(false); resumeFromBrief()");
         await sleep(200);
-        await cdp.eval("failSwaps = 9;");
-        const campaignNoAuto = await cdp.eval("document.querySelectorAll('#board .cell.hint').length");
-        if (campaignNoAuto) throw new Error("campaign must not auto-hint");
-        report.push("campaign does not auto-hint after misses");
+        const campaignNoAuto = await cdp.eval(`(function () {
+            failSwaps = 5;
+            maybeHintNudge();
+            const miss = {
+                hints: document.querySelectorAll("#board .cell.hint").length,
+                nudge: document.getElementById("hintBtn").classList.contains("hint-nudge"),
+                charges: hintCharges
+            };
+            clearHintNudge();
+            failSwaps = 0;
+            secondsSinceClear = 15;
+            maybeHintNudge();
+            const idle = {
+                hints: document.querySelectorAll("#board .cell.hint").length,
+                nudge: document.getElementById("hintBtn").classList.contains("hint-nudge"),
+                charges: hintCharges
+            };
+            useHint();
+            const used = {
+                nudge: document.getElementById("hintBtn").classList.contains("hint-nudge"),
+                charges: hintCharges
+            };
+            return { miss: miss, idle: idle, used: used };
+        })()`);
+        if (campaignNoAuto.miss.hints || campaignNoAuto.idle.hints) throw new Error("campaign must not auto-hint");
+        if (!campaignNoAuto.miss.nudge || campaignNoAuto.miss.charges !== 3) {
+            throw new Error("5 missed swaps should highlight the hint button without spending " + JSON.stringify(campaignNoAuto.miss));
+        }
+        if (!campaignNoAuto.idle.nudge) throw new Error("15s idle should highlight the hint button");
+        if (campaignNoAuto.used.nudge) throw new Error("using a hint should clear the highlight");
+        report.push("hint highlight: 15s or 5 misses, no auto-hint; useHint clears it");
 
         await cdp.eval(`window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))`);
         await sleep(150);
@@ -796,6 +885,123 @@ async function main() {
             throw new Error("H should spend a hint charge " + JSON.stringify(hHint));
         }
         report.push("H spends a hint charge");
+
+        const powerAndAnim = await cdp.eval(`(async function () {
+            tutorialActive = false;
+            paused = false;
+            locked = false;
+            runEnded = false;
+            deadlocked = false;
+            hideOverlays();
+            const face = activeCatalog.find(function (item) { return item.classId === "FaceOnSpirals"; });
+            const edge = activeCatalog.find(function (item) { return item.classId === "EdgeOnDisk"; });
+            const irr = activeCatalog.find(function (item) { return item.classId === "Irregular"; });
+            const ell = activeCatalog.find(function (item) { return item.classId === "Elliptical"; });
+            const grp = activeCatalog.find(function (item) { return item.classId === "Group"; });
+            function paintMixed() {
+                const cycle = [edge, irr, ell, grp, face];
+                let n = 0;
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        board[r][c] = cloneTile(cycle[n % cycle.length]);
+                        n += 1;
+                    }
+                }
+            }
+            paintMixed();
+            paintFullBoard();
+            const score0 = score;
+            const clears0 = clearsDone;
+            const charge0 = powerCharge.EdgeOnDisk || 0;
+            powerCharge.EdgeOnDisk = POWER_CHARGE_COST;
+            armedPower = "EdgeOnDisk";
+            await firePower(0, 0);
+            const row = {
+                score: score,
+                score0: score0,
+                clears: clearsDone,
+                clears0: clears0,
+                charge: powerCharge.EdgeOnDisk,
+                spent: powerCharge.EdgeOnDisk === 0
+            };
+
+            paintMixed();
+            board[0][0] = cloneTile(ell);
+            paintFullBoard();
+            const score1 = score;
+            const clears1 = clearsDone;
+            powerCharge.Elliptical = POWER_CHARGE_COST;
+            armedPower = "Elliptical";
+            await firePower(0, 0);
+            const single = {
+                scoreSame: score === score1,
+                clearsSame: clearsDone === clears1,
+                charge: powerCharge.Elliptical
+            };
+
+            paintMixed();
+            board[0][1] = cloneTile(face);
+            board[1][1] = cloneTile(edge);
+            board[1][0] = cloneTile(irr);
+            paintFullBoard();
+            await rotateRingClockwise(0, 0);
+            const rotated = {
+                e: board[0][1].classId,
+                se: board[1][1].classId,
+                s: board[1][0].classId
+            };
+
+            const beforeShuffle = {
+                a: board[0][0] && board[0][0].id,
+                b: board[0][1] && board[0][1].id,
+                c: board[1][0] && board[1][0].id,
+                d: board[1][1] && board[1][1].id
+            };
+            await shuffleNeighborhood(0, 0);
+            const afterShuffle = [board[0][0].id, board[0][1].id, board[1][0].id, board[1][1].id].sort().join(",");
+            const beforeIds = [beforeShuffle.a, beforeShuffle.b, beforeShuffle.c, beforeShuffle.d].sort().join(",");
+
+            paintMixed();
+            board[0][0] = cloneTile(face);
+            board[2][3] = cloneTile(face);
+            paintFullBoard();
+            powerCharge.Group = POWER_CHARGE_COST;
+            armedPower = "Group";
+            await firePower(0, 0);
+            const glow = document.querySelectorAll("#board .cell.power-glow").length;
+
+            toggleAnimSpeed();
+            const slowOn = animSpeed === "slow" && progress.animSpeed === "slow";
+            toggleAnimSpeed();
+            const fastOn = animSpeed === "fast";
+
+            return {
+                row: row,
+                single: single,
+                rotated: rotated,
+                shuffleKept: afterShuffle === beforeIds,
+                glow: glow,
+                slowOn: slowOn,
+                fastOn: fastOn,
+                cost: POWER_CHARGE_COST
+            };
+        })()`);
+        if (powerAndAnim.row.score !== powerAndAnim.row.score0 || powerAndAnim.row.clears !== powerAndAnim.row.clears0) {
+            throw new Error("row power must not score or count " + JSON.stringify(powerAndAnim.row));
+        }
+        if (!powerAndAnim.row.spent) throw new Error("using a power should spend charge to 0");
+        if (!powerAndAnim.single.scoreSame || !powerAndAnim.single.clearsSame || powerAndAnim.single.charge !== 0) {
+            throw new Error("single-tile power must not score " + JSON.stringify(powerAndAnim.single));
+        }
+        if (powerAndAnim.rotated.e !== "Irregular" || powerAndAnim.rotated.se !== "FaceOnSpirals" || powerAndAnim.rotated.s !== "EdgeOnDisk") {
+            throw new Error("corner ring should rotate existing neighbors clockwise " + JSON.stringify(powerAndAnim.rotated));
+        }
+        if (!powerAndAnim.shuffleKept) throw new Error("corner shuffle should keep the same on-board tiles");
+        if (powerAndAnim.glow < 2) throw new Error("group power should highlight every tile of that class");
+        if (!powerAndAnim.slowOn || !powerAndAnim.fastOn || powerAndAnim.cost !== 5) {
+            throw new Error("speed toggle should persist in progress " + JSON.stringify(powerAndAnim));
+        }
+        report.push("powers: edge rotate, row/single no score, shuffle, group glow; speed toggle persists");
 
         await cdp.eval("goHome(); toggleLang()");
         await sleep(100);

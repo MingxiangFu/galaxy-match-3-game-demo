@@ -1,8 +1,20 @@
-# Galaxy classification match-3 demo
+# v1.0 五类分级教学
+
+**Five-class levels.** Galaxy classification match-3. Repo: [galaxy-match-3-game-demo](https://github.com/MingxiangFu/galaxy-match-3-game-demo/). v1.0 is the update still being uploaded; the remote may not contain these files yet.
+
+v1.0 五类分级教学。仓库见上；这次更新仍在手动上传，远程可能还没有这些文件。
 
 Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfolder), not identical pixels. Home selects Easy / Normal / Hard; Challenge uses the `Challange` folder after 9 stars. The player UI is bilingual (zh/en).
 
 这是一个按星系形态分类的科普消消乐。主页选简单 / 普通 / 困难；集齐 9 星后开放挑战模式。玩家界面可中英切换。
+
+## Dataset zip
+
+数据集压缩包：
+
+The image set is distributed as `GalaxyImagesByLevel.zip` in this project/repo. After clone or download, unzip it in the **project root** so `GalaxyImagesByLevel/Easy`, `Normal`, `Hard`, and `Challange` sit next to `index.html`. Opening `index.html` does **not** require unzipping: images are already embedded. Unzip before `./tools/rebuild_demo.sh` or before editing tiles.
+
+图库以 `GalaxyImagesByLevel.zip` 随仓库分发。克隆后解压到项目根目录；直接打开 `index.html` 不必解压，重建或改图前需要解压。
 
 ## Play
 
@@ -11,9 +23,9 @@ Educational match-3 from `GalaxyImagesByLevel/`. Matching is by **class** (subfo
 1. Open `index.html` in a browser (double-click, or a local server).
 2. Optional:
    `python3 -m http.server 43191 --bind 127.0.0.1`
-3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level; finish within **60s / 90s / 120s** (Easy / Normal / Hard); use **at most one** hint. Easy is a tutorial; after the first completion you can skip it (checked by default).
-4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 per 10 successful clears. When a run ends, save a result PNG. Levels instead refill +1 every 10s.
-5. Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default Chinese).
+3. Campaign: swap adjacent tiles of the same morphological class. Reach **20** successful clears. Stars: clear the level; finish within **60s / 90s / 120s** (Easy / Normal / Hard); use **at most one** hint. Easy asks whether to take the tutorial before the intro; after the first completion, skip is the default. Fast/Slow swap sits left of Hint.
+4. Challenge: score plus a 60s countdown (**+3s** per clear). Hints start at 3, cap at 3, and refill +1 per 10 successful clears. When a run ends, save a result PNG. Levels instead refill +1 every 10s. After 15s without a clear or 5 failed swaps, the hint button highlights (it does not auto-hint).
+5. The bottom class row is five power-ups (charge 5 clears of that class). Shortcuts: **Esc** pauses, **H** uses a hint. Language toggle is on the home screen and in play (default Chinese).
 
 `index.html` is a single portable file (inline CSS/JS, JPEG data URIs). Image bytes are not gzipped.
 
@@ -42,7 +54,8 @@ Same thing, without the wrapper: `python3 tools/build_index.py`. Both rewrite `i
 
 ## Dataset
 
-- **Included:** `GalaxyImagesByLevel/` — five classes (FaceOnSpirals, EdgeOnDisk, Irregular, Elliptical, Group / 星系团). Challenge folder spelling is `Challange`.
+- **Distributed as:** `GalaxyImagesByLevel.zip` (unzip in the project root; see **Dataset zip** above).
+- **Folder after unzip:** `GalaxyImagesByLevel/` — five classes (FaceOnSpirals, EdgeOnDisk, Irregular, Elliptical, Group / 星系团). Challenge folder spelling is `Challange`.
 - **Not used by the current build:** `GalaxyImages4Class/`
 - **Not included in spirit of the portable demo:** original `GalaxyImages/` (~6000 images), gitignored.
 

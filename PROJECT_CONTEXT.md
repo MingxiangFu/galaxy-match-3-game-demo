@@ -6,10 +6,10 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 
 ## Modes
 
-- **Campaign:** Easy / Normal / Hard. Clear `n = 20` successful matches (`CLEARS_TO_WIN`). Three stars: clear the level; finish within the level time (Easy 60s / Normal 90s / Hard 120s); use **at most one** hint. Easy is a tutorial with a fixed opening board; later levels need ≥1 star on the previous card.
+- **Campaign:** Easy / Normal / Hard. Clear `n = 20` successful matches (`CLEARS_TO_WIN`). Three stars: clear the level; finish within the level time (Easy 60s / Normal 90s / Hard 120s); use **at most one** hint. Easy asks whether to take the tutorial before the intro modal. Later levels need ≥1 star on the previous card.
 - **Challenge:** `GalaxyImagesByLevel/Challange` (real folder spelling). Score + countdown, +3s per clear. Unlocks at 9 stars. Optional PNG result download. Start modal explains score, +3s, and +1 hint per 10 clears.
 
-战役为三关 20 消与三星；简单关带教程；挑战为倒计时，9 星解锁。
+战役为三关 20 消与三星；简单关先询问教程；挑战为倒计时，9 星解锁。
 
 ## Layout
 
@@ -30,13 +30,14 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - Board: 6×4 if unique count < 32, else 8×4
 - Gravity from the top; after settle, if no legal swap remains, pause and wait for a center **refresh** button (planted move). Do not auto-reshuffle.
 - Gravity spawns must not instant-match; unused files of the just-cleared class are not dumped back as a stack
-- Hints are **manual** (button or **H**). Levels: 3 charges, cap 3, **+1 every 10s**. Challenge: **+1 per 10 clears**, with `n/10` progress; clears at the cap do not count. No auto-hint.
-- Easy tutorial freezes the timer and does not spend/count its guided hint; free play after unlock is normal.
+- Hints are **manual** (button or **H**). Levels: 3 charges, cap 3, **+1 every 10s**. Challenge: **+1 per 10 clears**, with `n/10` progress; clears at the cap do not count. No auto-hint. After 15s without a successful clear or 5 failed swaps, only the hint **button** is highlighted.
+- Easy tutorial freezes the timer and does not spend/count hints. After the first completion, the ask overlay defaults to skip.
+- Swap animation: Fast (default) or Slow (tiles slide, then shatter or slide back). Persisted as `progress.animSpeed`.
+- Class row is five power-ups. Charge cost is 5 successful clears of that class. Row/single power clears do not score, count, or charge. Rotate/shuffle score only if they create a normal 3-match.
 - Pause is at the top (**Esc**); it does not reset the board or progress
 - Player language: default Chinese, toggle persists (`progress.lang`)
-- Easy tutorial completion persists (`progress.tutorialDone`); skip checkbox appears afterwards, checked by default
 - Progress: `localStorage` key `galaxyGameDemo.progress.v1`
 
 ## Latest update
 
-[update/2026-10-09-tutorial-timer-challenge-deadlock.md](update/2026-10-09-tutorial-timer-challenge-deadlock.md)
+[update/2026-10-20-slow-anim-tutorial-powers.md](update/2026-10-20-slow-anim-tutorial-powers.md)

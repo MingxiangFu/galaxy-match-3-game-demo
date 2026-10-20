@@ -367,6 +367,11 @@ const required = [
     ["buildTutorialBoard", "Easy tutorial board"],
     ["skipTutorial", "skip tutorial checkbox"],
     ["function toggleLang()", "language toggle"],
+    ["function toggleAnimSpeed()", "animation speed toggle"],
+    ["POWER_CHARGE_COST = 5", "power charge cost"],
+    ["function answerTutorial", "ask-first tutorial"],
+    ["function firePower", "power-up fire"],
+    ["hint-nudge", "hint button highlight"],
     ["onKeyDown", "Esc/H shortcuts"]
 ];
 const forbidden = [
