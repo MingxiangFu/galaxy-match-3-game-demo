@@ -284,6 +284,10 @@ body.playing {
     pointer-events: none;
 }
 
+.tutor-mask.blocking {
+    pointer-events: auto;
+}
+
 .tutor-hole {
     position: fixed;
     z-index: 181;
@@ -320,6 +324,14 @@ body.playing {
     pointer-events: none;
 }
 
+.tutor-callout.tutor-callout-center {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    max-width: min(640px, 88vw);
+}
+
 .tutor-callout u {
     text-decoration: underline;
     text-underline-offset: 4px;
@@ -339,12 +351,29 @@ body.playing {
     bottom: 0;
     z-index: 560;
     display: grid;
-    grid-template-columns: auto auto auto 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 12px;
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
     background: rgba(7, 11, 22, 0.94);
     border-top: 1px solid rgba(125, 211, 252, 0.25);
+}
+
+.tutor-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.tutor-bar-side {
+    min-width: 0;
+}
+
+.tutor-end-slot {
+    justify-self: end;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .tutor-bar .page {
@@ -355,8 +384,7 @@ body.playing {
 }
 
 #tutorEndBtn {
-    justify-self: end;
-    margin-left: 24px;
+    margin-left: 0;
     background: linear-gradient(135deg, #fbbf24, #d97706);
 }
 
@@ -381,7 +409,6 @@ body.playing {
 }
 
 .legend-item .power-name {
-    font-size: 11px;
     font-weight: 800;
 }
 
@@ -757,37 +784,48 @@ body.playing {
 
 .legend {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: clamp(4px, 1.2vw, 10px);
     margin-top: 8px;
     flex-shrink: 0;
+    width: 100%;
 }
 
 .legend-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 7px 8px;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px 4px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.06);
     min-width: 0;
 }
 
+.legend-item.power {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
 .legend-item img {
-    width: 36px;
-    height: 36px;
+    width: clamp(40px, 7.5vw, 58px);
+    height: clamp(40px, 7.5vw, 58px);
     border-radius: 8px;
     object-fit: cover;
     flex-shrink: 0;
 }
 
-.legend-item span {
+.legend-item span,
+.legend-item .power-name {
     min-width: 0;
-    font-size: 11px;
-    line-height: 1.3;
-    font-weight: 700;
+    font-size: clamp(12px, 2.2vw, 16px);
+    line-height: 1.2;
+    font-weight: 800;
     color: var(--ink);
+    text-align: center;
+    overflow-wrap: anywhere;
 }
 
 .legend-item small {
@@ -951,7 +989,6 @@ body.playing {
 
 @media (max-width: 900px) {
     .level-grid { grid-template-columns: 1fr; }
-    .legend { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 700px) {
@@ -967,8 +1004,6 @@ body.playing {
 
 @media (max-height: 760px) {
     .lesson p { font-size: 12px; }
-    .legend-item img { width: 28px; height: 28px; }
-    .legend-item span { font-size: 10px; }
     .title-block h1 { font-size: 18px; }
     .stat { padding: 6px 8px; }
     .stat strong { font-size: 16px; }
@@ -1088,10 +1123,15 @@ body.playing {
 <div id="tutorHole" class="tutor-hole hidden"></div>
 <div id="tutorCallout" class="tutor-callout hidden"></div>
 <div id="tutorBar" class="tutor-bar hidden">
-    <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">上一步</button>
-    <span class="page" id="tutorPageLabel">1 / 8</span>
-    <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">下一步</button>
-    <button type="button" class="btn tutor-end hidden" id="tutorEndBtn" onclick="completeTutorial()">结束教程</button>
+    <span class="tutor-bar-side" aria-hidden="true"></span>
+    <div class="tutor-nav">
+        <button type="button" class="btn ghost" id="tutorPrevBtn" onclick="tutorialPrev()">上一步</button>
+        <span class="page" id="tutorPageLabel">1 / 9</span>
+        <button type="button" class="btn" id="tutorNextBtn" onclick="tutorialNext()">下一步</button>
+    </div>
+    <div class="tutor-bar-side tutor-end-slot">
+        <button type="button" class="btn tutor-end hidden" id="tutorEndBtn" onclick="completeTutorial()">结束教程</button>
+    </div>
 </div>
 
 <div id="challengeOverlay" class="overlay">
@@ -1199,13 +1239,14 @@ const POWER_EFFECT = {
     Group: { zh: "高亮该格的同类", en: "Highlight every tile of that class" }
 };
 const TUTOR_PAGES = [
-    "class", "swap", "pop", "gravity", "pause", "hint", "stars",
+    "class", "swap", "pop", "anim", "gravity", "pause", "hint", "stars",
     "powerUse",
     "powerFace", "powerEdge", "powerIrregular", "powerElliptical", "powerGroup", "finish"
 ];
 const TUTOR_POWER_PAGES = [
     "powerUse", "powerFace", "powerEdge", "powerIrregular", "powerElliptical", "powerGroup"
 ];
+const TUTOR_CENTER_LOCK_PAGES = ["gravity", "finish"];
 
 function tutorPages() {
     if (POWERS_ENABLED) return TUTOR_PAGES.slice();
@@ -1294,6 +1335,7 @@ const I18N = {
         tutorCallClass: "匹配看的是<u>形态类别</u>，不是同一张照片。",
         tutorCallSwap: "交换相邻两格，让<u>三个同类</u>连成一线。",
         tutorCallPop: "三个同类会弹出再碎裂。这就是一次<u>成功消除</u>。",
+        tutorCallAnim: "格子会先<u>滑动</u>，再碎裂或滑回。提示按钮<u>左边</u>的按钮可切换快慢。",
         tutorCallGravity: "空位上方落下，新图从<u>顶部</u>补入。",
         tutorCallPause: "点右上角<u>暂停</u>或按 Esc。不会重置棋盘。",
         tutorCallHint: "点<u>提示</u>或按 H，会高亮一对可消除的格子。教程中不消耗次数。关卡每 <u>10 秒</u>恢复 1 次，最多 <u>3</u> 次；挑战每 <u>10 次成功消除</u>恢复 1 次，最多 <u>3</u> 次。",
@@ -1304,7 +1346,7 @@ const I18N = {
         tutorCallPowerIrregular: "<u>不规则</u>：打乱周围 3×3。贴边时只打乱棋盘上的格子。",
         tutorCallPowerElliptical: "<u>椭圆</u>：只消除这一格。<u>不计分</u>，也不计入进度或充能。",
         tutorCallPowerGroup: "<u>星系团</u>：高亮该格所属类别的所有格子，直到你交换或使用提示。",
-        tutorCallFinish: "教程结束。棋盘已解锁，计时即将开始。请点下面的<u>结束教程</u>开始自由玩。",
+        tutorCallFinish: "教程结束。请点右侧的<u>结束教程</u>开始自由玩。计时随后开始。",
         powerCharge: "{n} / {max}",
         powerReady: "已充满",
         msgPowerArmed: "再点一次取消，或点棋盘上的一格发动技能",
@@ -1428,6 +1470,7 @@ const I18N = {
         tutorCallClass: "Matching is by <u>morphological class</u>, not the same photo.",
         tutorCallSwap: "Swap two neighbors to make <u>three of a class</u> in a line.",
         tutorCallPop: "Three of a class pop, then shatter. That is one <u>successful clear</u>.",
+        tutorCallAnim: "Tiles <u>slide</u>, then shatter or slide back. The button <u>left of Hint</u> switches speed.",
         tutorCallGravity: "Tiles above the holes fall. New images spawn from the <u>top</u>.",
         tutorCallPause: "Tap <u>Pause</u> at the top right, or press Esc. The board is not reset.",
         tutorCallHint: "Tap <u>Hint</u> or press H to highlight a matchable pair. The tutorial does not spend charges. Levels regain 1 every <u>10s</u>, cap <u>3</u>. Challenge regains 1 every <u>10 successful clears</u>, cap <u>3</u>.",
@@ -1438,7 +1481,7 @@ const I18N = {
         tutorCallPowerIrregular: "<u>Irregular</u>: shuffle the 3×3 around the tile. On an edge, only on-board cells shuffle.",
         tutorCallPowerElliptical: "<u>Elliptical</u>: clear this tile only. It does <u>not score</u> and does not charge a power.",
         tutorCallPowerGroup: "<u>Galaxy group</u>: highlight every tile of that class until you swap or use a hint.",
-        tutorCallFinish: "Tutorial complete. The board unlocks and the timer is about to start. Tap <u>End tutorial</u> to play freely.",
+        tutorCallFinish: "Tutorial complete. Tap <u>End tutorial</u> on the right to play freely. The timer starts then.",
         powerCharge: "{n} / {max}",
         powerReady: "Charged",
         msgPowerArmed: "Tap again to cancel, or tap a tile to fire",
@@ -1529,7 +1572,7 @@ let tutorialPauseOpened = false;
 let tutorialSwapCellA = { r: 0, c: 2 };
 let tutorialSwapCellB = { r: 1, c: 2 };
 let tutorialSnapshots = [];
-let animSpeed = "fast";
+let animSpeed = "slow";
 let secondsSinceClear = 0;
 let hintNudgeOn = false;
 let powerCharge = {};
@@ -1580,7 +1623,7 @@ function defaultProgress() {
         challengeUnlocked: false,
         tutorialDone: false,
         lang: "zh",
-        animSpeed: "fast"
+        animSpeed: "slow"
     };
 }
 
@@ -1602,7 +1645,7 @@ function loadProgress() {
         next.challengeUnlocked = !!parsed.challengeUnlocked;
         next.tutorialDone = !!parsed.tutorialDone;
         next.lang = parsed.lang === "en" ? "en" : "zh";
-        next.animSpeed = parsed.animSpeed === "slow" ? "slow" : "fast";
+        next.animSpeed = parsed.animSpeed === "fast" ? "fast" : "slow";
         return next;
     } catch (err) {
         return defaultProgress();
@@ -3829,6 +3872,10 @@ function hideTutorUi() {
         const el = document.getElementById(id);
         if (el) el.classList.add("hidden");
     });
+    const mask = document.getElementById("tutorMask");
+    if (mask) mask.classList.remove("blocking");
+    const callout = document.getElementById("tutorCallout");
+    if (callout) callout.classList.remove("tutor-callout-center");
     document.querySelectorAll(".tutor-focus").forEach(function (el) {
         el.classList.remove("tutor-focus");
     });
@@ -3861,6 +3908,7 @@ function setTutorHole(rect, lightBoard) {
     const mask = document.getElementById("tutorMask");
     if (!hole || !mask) return;
     hole.classList.toggle("board-light", !!lightBoard);
+    mask.classList.toggle("blocking", !rect);
     if (!rect) {
         hole.classList.add("hidden");
         mask.classList.remove("hidden");
@@ -3874,10 +3922,14 @@ function setTutorHole(rect, lightBoard) {
     hole.style.height = (rect.height + 16) + "px";
 }
 
-function placeCallout(rect, html, showEnd) {
+let calloutPlaceGen = 0;
+
+function placeCallout(rect, html, showEnd, centered) {
     const el = document.getElementById("tutorCallout");
     if (!el) return;
+    const gen = ++calloutPlaceGen;
     el.classList.remove("hidden");
+    el.classList.toggle("tutor-callout-center", !!centered);
     el.innerHTML = html;
     if (showEnd) {
         const btn = document.createElement("button");
@@ -3887,10 +3939,19 @@ function placeCallout(rect, html, showEnd) {
         btn.onclick = completeTutorial;
         el.appendChild(btn);
     }
+    if (centered) {
+        el.style.left = "50%";
+        el.style.top = "50%";
+        el.style.right = "auto";
+        el.style.transform = "translate(-50%, -50%)";
+        return;
+    }
+    el.style.transform = "";
     const pad = 14;
     let left = rect ? rect.right + pad : 24;
     let top = rect ? rect.top : 88;
     requestAnimationFrame(function () {
+        if (gen !== calloutPlaceGen) return;
         const box = el.getBoundingClientRect();
         if (left + box.width > window.innerWidth - 12) {
             left = Math.max(12, (rect ? rect.left : 24) - box.width - pad);
@@ -3931,6 +3992,9 @@ function applyTutorialFocus() {
     } else if (step === "pause") {
         const pause = document.getElementById("pauseBtn");
         if (pause) targets.push(pause);
+    } else if (step === "anim") {
+        const speed = document.getElementById("speedBtn");
+        if (speed) targets.push(speed);
     } else if (step === "hint") {
         const hint = document.getElementById("hintBtn");
         if (hint) targets.push(hint);
@@ -3954,19 +4018,12 @@ function applyTutorialFocus() {
             const legend = document.getElementById("legend");
             if (legend) targets.push(legend);
         }
-    } else if (step === "finish") {
-        const boardEl = document.getElementById("board");
-        if (boardEl) targets.push(boardEl);
     }
-    targets.forEach(function (el) { el.classList.add("tutor-focus"); });
-    const rect = unionRect(targets);
-    const boardSteps = { class: 1, swap: 1, pop: 1, gravity: 1, finish: 1 };
-    const boardEl = document.getElementById("board");
-    const holeRect = boardSteps[step] ? (unionRect([boardEl]) || rect) : rect;
     const copyKey = {
         class: "tutorCallClass",
         swap: "tutorCallSwap",
         pop: "tutorCallPop",
+        anim: "tutorCallAnim",
         gravity: "tutorCallGravity",
         pause: "tutorCallPause",
         hint: "tutorCallHint",
@@ -3979,14 +4036,27 @@ function applyTutorialFocus() {
         powerGroup: "tutorCallPowerGroup",
         finish: "tutorCallFinish"
     }[step];
+    if (TUTOR_CENTER_LOCK_PAGES.indexOf(step) >= 0) {
+        setTutorHole(null);
+        placeCallout(null, copyKey ? t(copyKey) : "", false, true);
+        return;
+    }
+    targets.forEach(function (el) { el.classList.add("tutor-focus"); });
+    const rect = unionRect(targets);
+    const boardSteps = { class: 1, swap: 1, pop: 1 };
+    const boardEl = document.getElementById("board");
+    const holeRect = boardSteps[step] ? (unionRect([boardEl]) || rect) : rect;
     setTutorHole(step === "stars" ? null : holeRect, !!boardSteps[step]);
     if (step === "stars") {
         const mask = document.getElementById("tutorMask");
         const hole = document.getElementById("tutorHole");
-        if (mask) mask.classList.add("hidden");
+        if (mask) {
+            mask.classList.add("hidden");
+            mask.classList.remove("blocking");
+        }
         if (hole) hole.classList.add("hidden");
     }
-    placeCallout(rect, copyKey ? t(copyKey) : "", false);
+    placeCallout(rect, copyKey ? t(copyKey) : "", false, false);
 }
 
 function applyTutorialPage() {
@@ -4019,8 +4089,6 @@ function applyTutorialPage() {
 
     if (tutorialStep === "swap") {
         tutorialAllowCells = [tutorialSwapCellA, tutorialSwapCellB];
-    } else if (tutorialStep === "finish") {
-        tutorialAllowCells = "all";
     } else {
         tutorialAllowCells = "none";
     }
@@ -4208,7 +4276,7 @@ function onKeyDown(event) {
 
 progress = loadProgress();
 lang = progress.lang === "en" ? "en" : "zh";
-animSpeed = progress.animSpeed === "slow" ? "slow" : "fast";
+animSpeed = progress.animSpeed === "fast" ? "fast" : "slow";
 applyStaticLang();
 renderHome();
 window.addEventListener("resize", function () {

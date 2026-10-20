@@ -31,13 +31,13 @@ Portable educational match-3. Tiles come from `GalaxyImagesByLevel/`. Matching i
 - Gravity from the top; after settle, if no legal swap remains, pause and wait for a center **refresh** button (planted move). Do not auto-reshuffle.
 - Gravity spawns must not instant-match; unused files of the just-cleared class are not dumped back as a stack
 - Hints are **manual** (button or **H**). Levels: 3 charges, cap 3, **+1 every 10s**. Challenge: **+1 per 10 clears**, with `n/10` progress; clears at the cap do not count. No auto-hint. After 15s without a successful clear or 5 failed swaps, only the hint **button** is highlighted.
-- Easy tutorial freezes the timer and does not spend/count hints. After the first completion, the ask overlay defaults to skip. 上一步 restores that page’s board snapshot. Power tutorial pages stay in code but are skipped while `POWERS_ENABLED` is false. The board overlay is light; non-target tiles stay not clickable.
-- Swap animation: Fast (default) or Slow (tiles slide, then shatter or slide back). Persisted as `progress.animSpeed`.
-- Class row currently shows a representative image and the localized class name only. Power-up code stays gated behind `POWERS_ENABLED = false`.
+- Easy tutorial freezes the timer and does not spend/count hints. After the first completion, the ask overlay defaults to skip. 上一步 restores that page’s board snapshot. Power tutorial pages stay in code but are skipped while `POWERS_ENABLED` is false. Back / page / Next are centered; **结束教程** stays on the right. The original page-4 topic (**gravity / 下落补位**) and page-8 topic (**finish / 教程结束**) use centered outlined copy, a full board mask, and a disabled board. A short Slow-animation page sits after pop.
+- Swap animation: Slow is the default for new players; Fast remains on the toggle left of Hint. Persisted as `progress.animSpeed`.
+- Class row currently shows a larger representative image and the localized class name only, five-across on one row. Power-up code stays gated behind `POWERS_ENABLED = false`.
 - Pause is at the top (**Esc**); it does not reset the board or progress
 - Player language: default Chinese, toggle persists (`progress.lang`)
 - Progress: `localStorage` key `galaxyGameDemo.progress.v1`
 
 ## Latest update
 
-[update/2026-10-20-hide-powers-end-right.md](update/2026-10-20-hide-powers-end-right.md)
+[update/2026-10-20-tutorial-center-slow-default.md](update/2026-10-20-tutorial-center-slow-default.md)

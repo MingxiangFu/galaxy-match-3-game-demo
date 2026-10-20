@@ -170,7 +170,9 @@ async function main() {
             starNormal: STAR_TIME.normal,
             starHard: STAR_TIME.hard,
             lang: lang,
-            homeLang: document.getElementById("homeTitle").textContent
+            homeLang: document.getElementById("homeTitle").textContent,
+            animSpeed: animSpeed,
+            progressSpeed: progress.animSpeed
         })`);
         if (home.easyLocked) throw new Error("Easy should be open");
         if (!home.normalLocked || !home.hardLocked) throw new Error("Normal/Hard should start locked");
@@ -181,7 +183,10 @@ async function main() {
             throw new Error("star times should be 60/90/120 " + JSON.stringify(home));
         }
         if (home.lang !== "zh" || !home.homeLang.includes("星系")) throw new Error("default language should be Chinese");
-        report.push("lock: Easy open, Normal/Hard/Challenge locked; stars 60/90/120; default zh");
+        if (home.animSpeed !== "slow" || home.progressSpeed !== "slow") {
+            throw new Error("fresh load should default to slow animation " + JSON.stringify(home));
+        }
+        report.push("lock: Easy open, Normal/Hard/Challenge locked; stars 60/90/120; default zh; slow anim");
 
         await cdp.eval("startCampaign('easy')");
         await sleep(400);
@@ -225,11 +230,11 @@ async function main() {
         if (intro.brief) throw new Error("Yes should skip the normal intro and start the guided tutorial");
         if (!intro.tutorial || intro.step !== "class") throw new Error("Yes should start on the class page");
         if (!intro.mask || !intro.bar) throw new Error("tutorial should show a mask and bottom bar");
-        if (intro.page.replace(/\s/g, "") !== "1/8") throw new Error("page indicator should be 1 / 8, got " + intro.page);
+        if (intro.page.replace(/\s/g, "") !== "1/9") throw new Error("page indicator should be 1 / 9, got " + intro.page);
         if (!intro.prevDisabled) throw new Error("Back should be disabled on page 1");
         if (!intro.callout.includes("<u>") || !intro.skipHidden) throw new Error("callout should underline key words");
         if (intro.cols !== 6 || intro.rows !== 4 || intro.cells !== 24) throw new Error("Easy board should be 6x4");
-        report.push("tutorial Yes: mask, 1/8, Back disabled, 6x4 board, no intro modal");
+        report.push("tutorial Yes: mask, 1/9, Back disabled, 6x4 board, no intro modal");
 
         const tutorialLock = await cdp.eval(`(async function () {
             const step0 = tutorialStep;
@@ -253,6 +258,12 @@ async function main() {
         if (tutorialLock.powers || tutorialLock.pages.indexOf("powerUse") >= 0 || tutorialLock.pages.indexOf("powerFace") >= 0) {
             throw new Error("power tutorial pages must be skipped while powers are off " + JSON.stringify(tutorialLock.pages));
         }
+        if (tutorialLock.pages[tutorialLock.pages.indexOf("pop") + 1] !== "anim") {
+            throw new Error("slow-animation page must follow pop " + JSON.stringify(tutorialLock.pages));
+        }
+        if (tutorialLock.pages[tutorialLock.pages.indexOf("anim") + 1] !== "gravity") {
+            throw new Error("gravity must still follow the animation page " + JSON.stringify(tutorialLock.pages));
+        }
         if (tutorialLock.pages[tutorialLock.pages.indexOf("stars") + 1] !== "finish") {
             throw new Error("stars should go to finish while powers are off");
         }
@@ -261,7 +272,7 @@ async function main() {
         }
         report.push("tutorial: class step locks other tiles, Next goes to swap, power pages skipped");
 
-        const guided = await cdp.eval(`(function () {
+        const guided = await cdp.eval(`(async function () {
             setTutorialPageById("hint");
             const hintCopy = document.getElementById("tutorCallout").innerHTML;
             const hole = document.getElementById("tutorHole");
@@ -291,8 +302,83 @@ async function main() {
                 endOnRight: endRect.left >= nextRect.right - 1,
                 inCallout: !!(endBtn && endBtn.closest("#tutorCallout"))
             };
+            setTutorialPageById("anim");
+            const animCopy = document.getElementById("tutorCallout").innerHTML;
+            const speedBtn = document.getElementById("speedBtn");
+            const anim = {
+                step: tutorialStep,
+                copy: animCopy,
+                speedFocused: !!(speedBtn && speedBtn.classList.contains("tutor-focus")),
+                page: document.getElementById("tutorPageLabel").textContent
+            };
+            const bar = (function () {
+                const prev = document.getElementById("tutorPrevBtn").getBoundingClientRect();
+                const next = document.getElementById("tutorNextBtn").getBoundingClientRect();
+                const end = document.getElementById("tutorEndBtn").getBoundingClientRect();
+                const navMid = (prev.left + next.right) / 2;
+                return {
+                    navCentered: Math.abs(navMid - window.innerWidth / 2) < 48,
+                    endOnRight: end.left >= next.right - 1,
+                    navMid: navMid,
+                    winMid: window.innerWidth / 2
+                };
+            })();
+            async function inspectLockPage(id) {
+                setTutorialPageById(id);
+                await new Promise(function (resolve) {
+                    requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+                });
+                const callout = document.getElementById("tutorCallout");
+                const box = callout.getBoundingClientRect();
+                const mask = document.getElementById("tutorMask");
+                const hole = document.getElementById("tutorHole");
+                selected = null;
+                refreshSelection();
+                await clickCell(0, 0);
+                const afterClick = selected;
+                selected = null;
+                refreshSelection();
+                return {
+                    step: tutorialStep,
+                    copy: callout.innerHTML,
+                    centerDx: Math.abs((box.left + box.right) / 2 - window.innerWidth / 2),
+                    maskOn: !mask.classList.contains("hidden"),
+                    holeOff: hole.classList.contains("hidden"),
+                    allow: tutorialAllowCells,
+                    blocked: tutorialBlocksCell(0, 0) && tutorialBlocksCell(1, 2),
+                    stillSelected: afterClick
+                };
+            }
+            const gravity = await inspectLockPage("gravity");
+            const finishLock = await inspectLockPage("finish");
+            function legendMetrics() {
+                const items = Array.prototype.slice.call(document.querySelectorAll("#legend .legend-item"));
+                const rects = items.map(function (el) { return el.getBoundingClientRect(); });
+                const img = items[0] && items[0].querySelector("img");
+                const name = items[0] && items[0].querySelector("span");
+                const imgBox = img ? img.getBoundingClientRect() : { width: 0, height: 0 };
+                let overlap = false;
+                for (let i = 0; i < rects.length; i++) {
+                    for (let j = i + 1; j < rects.length; j++) {
+                        const a = rects[i];
+                        const b = rects[j];
+                        const separate = a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1;
+                        if (!separate) overlap = true;
+                    }
+                }
+                const tops = items.map(function (el) { return Math.round(el.getBoundingClientRect().top); });
+                return {
+                    count: items.length,
+                    rows: new Set(tops).size,
+                    imgW: imgBox.width,
+                    imgH: imgBox.height,
+                    namePx: name ? parseFloat(getComputedStyle(name).fontSize) : 0,
+                    overlap: overlap
+                };
+            }
+            const legendWide = legendMetrics();
             setTutorialPageById("swap");
-            return { stars: stars, finish: finish };
+            return { stars: stars, finish: finish, anim: anim, bar: bar, gravity: gravity, finishLock: finishLock, legendWide: legendWide };
         })()`);
         if (guided.stars.step !== "stars" || !guided.stars.brief) {
             throw new Error("page after hint should open the pause modal for star rules " + JSON.stringify(guided.stars));
@@ -309,7 +395,76 @@ async function main() {
         if (!guided.finish.hasEnd || guided.finish.endText !== "结束教程" || guided.finish.nextText !== "下一步" || !guided.finish.nextDisabled || guided.finish.sameSlot || !guided.finish.endOnRight || guided.finish.inCallout) {
             throw new Error("End tutorial must sit on the right, not in the Next slot " + JSON.stringify(guided.finish));
         }
-        report.push("tutorial: star page after hint; End tutorial is on the right, not in the Next slot");
+        if (!guided.bar.navCentered) {
+            throw new Error("tutorial Back/page/Next should be centered " + JSON.stringify(guided.bar));
+        }
+        if (guided.anim.step !== "anim" || !guided.anim.speedFocused) {
+            throw new Error("animation page should highlight the speed button " + JSON.stringify(guided.anim));
+        }
+        if (!(guided.anim.copy.includes("滑动") || guided.anim.copy.toLowerCase().includes("slide")) ||
+            !(guided.anim.copy.includes("碎裂") || guided.anim.copy.toLowerCase().includes("shatter")) ||
+            !(guided.anim.copy.includes("提示") || guided.anim.copy.toLowerCase().includes("hint"))) {
+            throw new Error("animation page should explain slide/shatter and the hint-adjacent toggle " + guided.anim.copy);
+        }
+        ["gravity", "finishLock"].forEach(function (key) {
+            const page = guided[key];
+            if (page.centerDx > 48) throw new Error(key + " callout must sit in the screen center " + JSON.stringify(page));
+            if (!page.maskOn || !page.holeOff) throw new Error(key + " must cover the board with the mask " + JSON.stringify(page));
+            if (page.allow !== "none" || !page.blocked || page.stillSelected) {
+                throw new Error(key + " board must be disabled " + JSON.stringify(page));
+            }
+        });
+        if (guided.gravity.step !== "gravity" || guided.finishLock.step !== "finish") {
+            throw new Error("center/mask treatment must follow gravity and finish topics " + JSON.stringify({ g: guided.gravity.step, f: guided.finishLock.step }));
+        }
+        if (guided.legendWide.count !== 5 || guided.legendWide.rows !== 1 || guided.legendWide.overlap) {
+            throw new Error("class row should be five non-overlapping chips on one row " + JSON.stringify(guided.legendWide));
+        }
+        if (guided.legendWide.imgW < 44 || guided.legendWide.imgH < 44 || guided.legendWide.namePx < 13) {
+            throw new Error("class image and name should be larger " + JSON.stringify(guided.legendWide));
+        }
+        report.push("tutorial: centered bar; gravity/finish center+dead board; anim page; larger class row");
+
+        await cdp.send("Emulation.setDeviceMetricsOverride", {
+            width: 390,
+            height: 844,
+            deviceScaleFactor: 1,
+            mobile: true
+        });
+        const legendNarrow = await cdp.eval(`(function () {
+            fitPlayLayout();
+            if (typeof applyTutorialFocus === "function" && tutorialActive) applyTutorialFocus();
+            const items = Array.prototype.slice.call(document.querySelectorAll("#legend .legend-item"));
+            const rects = items.map(function (el) { return el.getBoundingClientRect(); });
+            let overlap = false;
+            for (let i = 0; i < rects.length; i++) {
+                for (let j = i + 1; j < rects.length; j++) {
+                    const a = rects[i];
+                    const b = rects[j];
+                    const separate = a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1;
+                    if (!separate) overlap = true;
+                }
+            }
+            const tops = items.map(function (el) { return Math.round(el.getBoundingClientRect().top); });
+            const img = items[0] && items[0].querySelector("img");
+            const name = items[0] && items[0].querySelector("span");
+            const imgBox = img ? img.getBoundingClientRect() : { width: 0, height: 0 };
+            return {
+                count: items.length,
+                rows: new Set(tops).size,
+                overlap: overlap,
+                imgW: imgBox.width,
+                namePx: name ? parseFloat(getComputedStyle(name).fontSize) : 0
+            };
+        })()`);
+        await cdp.send("Emulation.clearDeviceMetricsOverride");
+        if (legendNarrow.count !== 5 || legendNarrow.rows !== 1 || legendNarrow.overlap) {
+            throw new Error("narrow window must keep one non-overlapping class row " + JSON.stringify(legendNarrow));
+        }
+        if (legendNarrow.imgW < 36 || legendNarrow.namePx < 12) {
+            throw new Error("narrow class chips should stay larger than the old size " + JSON.stringify(legendNarrow));
+        }
+        report.push("class row stays one non-overlapping row in a 390px window");
 
         const rewind = await cdp.eval(`(async function () {
             animSpeed = "fast";
@@ -1063,10 +1218,12 @@ async function main() {
             await firePower(0, 0);
             const glow = document.querySelectorAll("#board .cell.power-glow").length;
 
-            toggleAnimSpeed();
-            const slowOn = animSpeed === "slow" && progress.animSpeed === "slow";
+            animSpeed = "slow";
+            progress.animSpeed = "slow";
             toggleAnimSpeed();
             const fastOn = animSpeed === "fast";
+            toggleAnimSpeed();
+            const slowOn = animSpeed === "slow" && progress.animSpeed === "slow";
 
             return {
                 row: row,
